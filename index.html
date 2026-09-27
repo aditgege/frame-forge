@@ -1,0 +1,3906 @@
+<!doctype html>
+<html lang="id">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FRAMEFORGE — editor animasi aset isometrik</title>
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l9 5-9 5-9-5z' fill='%23ffd29e'/%3E%3Cpath d='M3 7l9 5v10l-9-5z' fill='%23ffb454'/%3E%3Cpath d='M21 7l-9 5v10l9-5z' fill='%23c97b2e'/%3E%3C/svg%3E"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --bg: #0d0d10;
+        --panel: #141418;
+        --panel2: #1a1a20;
+        --line: #24242b;
+        --line2: #32323c;
+        --text: #e8e4da;
+        --muted: #8f8c80;
+        --dim: #5e5c54;
+        --accent: #ffb454;
+        --accent-ink: #241505;
+        --ok: #9ece6a;
+        --warn: #e0af68;
+        --fail: #f7768e;
+        --mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+        --sans: "Space Grotesk", system-ui, sans-serif;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+      ::selection {
+        background: var(--accent);
+        color: var(--accent-ink);
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: var(--sans);
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+      button {
+        font-family: inherit;
+        cursor: pointer;
+        background: none;
+        border: none;
+        color: inherit;
+      }
+      button:disabled {
+        opacity: 0.35;
+        pointer-events: none;
+      }
+      *::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+      }
+      *::-webkit-scrollbar-thumb {
+        background: #2c2c34;
+        border-radius: 6px;
+        border: 2px solid var(--panel);
+      }
+      *::-webkit-scrollbar-track {
+        background: transparent;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .mono {
+        font-family: var(--mono);
+      }
+
+      /* ---------- topbar ---------- */
+      #topbar {
+        height: 53px;
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 0 16px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        min-width: 0;
+      }
+      .brand h1 {
+        font-size: 15px;
+        font-weight: 700;
+        letter-spacing: 0.06em;
+      }
+      .brand small {
+        display: block;
+        font-family: var(--mono);
+        font-size: 9.5px;
+        color: var(--muted);
+        letter-spacing: 0.05em;
+        margin-top: 1px;
+      }
+      #topbar .sp {
+        flex: 1;
+      }
+      .pill {
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.1em;
+        padding: 5px 12px;
+        border-radius: 999px;
+        border: 1px solid var(--line2);
+        color: var(--muted);
+        display: flex;
+        align-items: center;
+        gap: 7px;
+        white-space: nowrap;
+      }
+      .pill::before {
+        content: "";
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: var(--dim);
+      }
+      .pill.ok {
+        color: var(--ok);
+        border-color: #3d5230;
+      }
+      .pill.ok::before {
+        background: var(--ok);
+      }
+      .pill.warn {
+        color: var(--warn);
+        border-color: #5a4c2c;
+      }
+      .pill.warn::before {
+        background: var(--warn);
+      }
+      .pill.fail {
+        color: var(--fail);
+        border-color: #5c3038;
+      }
+      .pill.fail::before {
+        background: var(--fail);
+        animation: blink 1.2s infinite;
+      }
+      @keyframes blink {
+        50% {
+          opacity: 0.35;
+        }
+      }
+      .btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--mono);
+        font-size: 11px;
+        font-weight: 500;
+        padding: 8px 13px;
+        border-radius: 7px;
+        border: 1px solid var(--line2);
+        background: var(--panel2);
+        color: var(--text);
+        transition:
+          border-color 0.12s,
+          color 0.12s,
+          background 0.12s;
+      }
+      .btn:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .btn.primary {
+        background: var(--accent);
+        border-color: var(--accent);
+        color: var(--accent-ink);
+        font-weight: 700;
+      }
+      .btn.primary:hover {
+        background: #ffc477;
+        color: var(--accent-ink);
+      }
+      .btn.ghost {
+        background: transparent;
+      }
+
+      /* ---------- layout ---------- */
+      #app {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 304px 1fr;
+        min-height: 0;
+      }
+      #sidebar {
+        overflow-y: auto;
+        background: var(--panel);
+        border-right: 1px solid var(--line);
+      }
+      .section {
+        padding: 14px 16px 16px;
+        border-bottom: 1px solid var(--line);
+      }
+      .sec-h {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        font-family: var(--mono);
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.14em;
+        color: var(--muted);
+        text-transform: uppercase;
+        margin-bottom: 12px;
+      }
+      .sec-h::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: var(--line);
+      }
+      .sec-h em {
+        font-style: normal;
+        color: var(--dim);
+        letter-spacing: 0.05em;
+      }
+
+      .fld {
+        margin-bottom: 9px;
+      }
+      .fld > span.fl {
+        display: block;
+        font-family: var(--mono);
+        font-size: 9.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        margin-bottom: 5px;
+      }
+      .row {
+        display: flex;
+        gap: 8px;
+      }
+      .row .fld {
+        flex: 1;
+        min-width: 0;
+      }
+      input[type="text"],
+      input[type="number"] {
+        width: 100%;
+        background: #0f0f13;
+        border: 1px solid var(--line2);
+        border-radius: 6px;
+        color: var(--text);
+        font-family: var(--mono);
+        font-size: 11.5px;
+        padding: 6px 8px;
+        outline: none;
+        transition: border-color 0.12s;
+      }
+      input[type="text"]:focus,
+      input[type="number"]:focus {
+        border-color: var(--accent);
+      }
+      input::placeholder {
+        color: var(--dim);
+      }
+      input[type="range"] {
+        -webkit-appearance: none;
+        appearance: none;
+        height: 4px;
+        background: #2c2c34;
+        border-radius: 2px;
+        outline: none;
+        cursor: pointer;
+      }
+      input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 13px;
+        height: 13px;
+        border-radius: 50%;
+        background: var(--accent);
+        border: 2px solid #0d0d10;
+      }
+      input[type="range"]::-moz-range-thumb {
+        width: 11px;
+        height: 11px;
+        border-radius: 50%;
+        background: var(--accent);
+        border: 2px solid #0d0d10;
+      }
+      .seg {
+        display: flex;
+        border: 1px solid var(--line2);
+        border-radius: 7px;
+        overflow: hidden;
+      }
+      .seg button {
+        flex: 1;
+        padding: 6px 0;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--muted);
+        transition: 0.12s;
+      }
+      .seg button + button {
+        border-left: 1px solid var(--line2);
+      }
+      .seg button.on {
+        background: #2a2318;
+        color: var(--accent);
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 11px;
+      }
+      .chip {
+        font-family: var(--mono);
+        font-size: 9.5px;
+        padding: 4px 9px;
+        border-radius: 999px;
+        border: 1px solid var(--line2);
+        color: var(--muted);
+        transition: 0.12s;
+      }
+      .chip:hover {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .chip.on {
+        background: #2a2318;
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+      .mini {
+        font-family: var(--mono);
+        font-size: 9.5px;
+        color: var(--dim);
+        line-height: 1.5;
+        margin-top: 6px;
+      }
+      .detected {
+        font-family: var(--mono);
+        font-size: 10.5px;
+        color: var(--accent);
+        margin-top: 4px;
+      }
+      #notesList {
+        list-style: none;
+        margin-top: 5px;
+      }
+      #notesList li {
+        font-family: var(--mono);
+        font-size: 9.5px;
+        color: var(--dim);
+        padding-left: 12px;
+        position: relative;
+        line-height: 1.6;
+      }
+      #notesList li::before {
+        content: "·";
+        position: absolute;
+        left: 2px;
+      }
+      #fsNote {
+        font-family: var(--mono);
+        font-size: 9.5px;
+        color: var(--warn);
+        margin-top: 3px;
+      }
+      .dlgrid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 7px;
+      }
+      .dlgrid .btn {
+        justify-content: flex-start;
+        padding: 7px 10px;
+        font-size: 10px;
+      }
+      details {
+        margin-top: 10px;
+        border: 1px solid var(--line);
+        border-radius: 7px;
+        overflow: hidden;
+      }
+      details summary {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--muted);
+        padding: 7px 10px;
+        cursor: pointer;
+        list-style: none;
+        display: flex;
+        align-items: center;
+        gap: 7px;
+      }
+      details summary::before {
+        content: "▸";
+        color: var(--accent);
+        transition: transform 0.15s;
+      }
+      details[open] summary::before {
+        transform: rotate(90deg);
+      }
+      #jsonPre {
+        max-height: 230px;
+        overflow: auto;
+        background: #0b0b0e;
+        padding: 10px 12px;
+        font-family: var(--mono);
+        font-size: 9.8px;
+        line-height: 1.55;
+        color: #b9b5a8;
+        white-space: pre;
+      }
+      .jk {
+        color: var(--accent);
+      }
+      .js {
+        color: #d8d4c8;
+      }
+      .jb {
+        color: var(--warn);
+      }
+      .jn {
+        color: var(--ok);
+      }
+      #srcInfo {
+        font-family: var(--mono);
+        font-size: 10.5px;
+        color: var(--muted);
+        margin-bottom: 10px;
+        word-break: break-all;
+        line-height: 1.5;
+      }
+      .btnrow {
+        display: flex;
+        gap: 7px;
+        flex-wrap: wrap;
+      }
+
+      /* ---------- main ---------- */
+      #main {
+        display: flex;
+        flex-direction: column;
+        min-width: 0;
+        min-height: 0;
+      }
+      #tabs {
+        display: flex;
+        gap: 2px;
+        padding: 0 10px;
+        background: var(--panel);
+        border-bottom: 1px solid var(--line);
+        flex: none;
+      }
+      #tabs button {
+        font-family: var(--mono);
+        font-size: 10.5px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+        padding: 11px 13px;
+        border-bottom: 2px solid transparent;
+        transition: 0.12s;
+      }
+      #tabs button:hover {
+        color: var(--text);
+      }
+      #tabs button.on {
+        color: var(--accent);
+        border-bottom-color: var(--accent);
+      }
+      #vpWrap {
+        position: relative;
+        flex: 1;
+        min-height: 260px;
+        overflow: hidden;
+        background: #0a0a0d;
+        cursor: grab;
+      }
+      #vpWrap:active {
+        cursor: grabbing;
+      }
+      #vp {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+      }
+      #hudInfo {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: rgba(232, 228, 218, 0.78);
+        background: rgba(10, 10, 13, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 6px;
+        padding: 6px 9px;
+        backdrop-filter: blur(4px);
+        pointer-events: none;
+        max-width: 70%;
+      }
+      #zoomCtl {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        display: flex;
+        align-items: center;
+        gap: 2px;
+        background: rgba(10, 10, 13, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.06);
+        border-radius: 6px;
+        padding: 3px;
+        backdrop-filter: blur(4px);
+      }
+      #zoomCtl button {
+        width: 26px;
+        height: 24px;
+        border-radius: 4px;
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--muted);
+        display: grid;
+        place-items: center;
+      }
+      #zoomCtl button:hover {
+        color: var(--accent);
+        background: rgba(255, 180, 84, 0.1);
+      }
+      #zoomCtl span {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--text);
+        min-width: 42px;
+        text-align: center;
+      }
+      #hints {
+        position: absolute;
+        bottom: 10px;
+        left: 12px;
+        font-family: var(--mono);
+        font-size: 9.5px;
+        color: rgba(232, 228, 218, 0.32);
+        pointer-events: none;
+      }
+      #errOverlay {
+        position: absolute;
+        top: 14px;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 82%;
+      }
+      .err-panel {
+        display: flex;
+        gap: 12px;
+        align-items: flex-start;
+        background: #1c1216;
+        border: 1px solid var(--fail);
+        border-radius: 9px;
+        padding: 12px 16px;
+        color: var(--text);
+      }
+      .err-panel svg {
+        color: var(--fail);
+        flex: none;
+        margin-top: 1px;
+      }
+      .err-panel b {
+        font-size: 12.5px;
+        display: block;
+        margin-bottom: 3px;
+      }
+      .err-panel p {
+        font-family: var(--mono);
+        font-size: 10.5px;
+        color: #d8aab3;
+        line-height: 1.5;
+      }
+
+      /* hero / dropzone */
+      #dropHero {
+        position: absolute;
+        inset: 0;
+        display: grid;
+        place-items: center;
+        pointer-events: none;
+      }
+      .hero-panel {
+        pointer-events: auto;
+        width: min(540px, 92%);
+        background: rgba(15, 15, 19, 0.85);
+        backdrop-filter: blur(10px);
+        border: 1px solid var(--line2);
+        border-radius: 14px;
+        padding: 30px 34px;
+        text-align: center;
+      }
+      .hero-panel h2 {
+        font-size: 21px;
+        font-weight: 600;
+        margin: 14px 0 8px;
+      }
+      .hero-panel p {
+        font-size: 12.5px;
+        color: var(--muted);
+        line-height: 1.6;
+        max-width: 420px;
+        margin: 0 auto;
+      }
+      .hero-flow {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        gap: 8px;
+        font-family: var(--mono);
+        font-size: 10px;
+        letter-spacing: 0.06em;
+        color: var(--accent);
+        margin: 16px 0 20px;
+        flex-wrap: wrap;
+      }
+      .hero-flow i {
+        font-style: normal;
+        color: var(--dim);
+      }
+      .hero-alt {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--dim);
+        margin-top: 10px;
+      }
+      .hero-demo {
+        margin-top: 18px;
+        padding-top: 15px;
+        border-top: 1px solid var(--line);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .hero-demo > span {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--dim);
+      }
+      body.dragging::after {
+        content: "LEPASKAN UNTUK MEMUAT PNG";
+        position: fixed;
+        inset: 10px;
+        border: 2px dashed var(--accent);
+        border-radius: 14px;
+        background: rgba(255, 180, 84, 0.05);
+        z-index: 99;
+        display: grid;
+        place-items: center;
+        font-family: var(--mono);
+        letter-spacing: 0.2em;
+        font-size: 13px;
+        color: var(--accent);
+        pointer-events: none;
+      }
+
+      /* playbar */
+      #playbar {
+        flex: none;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 9px 14px;
+        background: var(--panel);
+        border-top: 1px solid var(--line);
+      }
+      .transport {
+        display: flex;
+        gap: 3px;
+      }
+      .ibtn {
+        width: 32px;
+        height: 32px;
+        border-radius: 7px;
+        display: grid;
+        place-items: center;
+        color: var(--muted);
+        transition: 0.12s;
+        border: 1px solid transparent;
+      }
+      .ibtn:hover {
+        color: var(--accent);
+        border-color: var(--line2);
+        background: var(--panel2);
+      }
+      .ibtn.play {
+        color: var(--accent);
+        border-color: var(--line2);
+        background: #221c12;
+        width: 38px;
+      }
+      #playbar.dead .transport,
+      #playbar.dead #scrub,
+      #playbar.dead #frameCtr {
+        opacity: 0.3;
+        pointer-events: none;
+      }
+      #scrub {
+        flex: 1;
+        min-width: 60px;
+      }
+      #frameCtr {
+        font-family: var(--mono);
+        font-size: 11px;
+        color: var(--text);
+        min-width: 66px;
+        text-align: center;
+      }
+      .ptogs {
+        display: flex;
+        gap: 5px;
+      }
+      .tog {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-family: var(--mono);
+        font-size: 9.5px;
+        letter-spacing: 0.06em;
+        padding: 6px 9px;
+        border-radius: 6px;
+        border: 1px solid var(--line2);
+        color: var(--muted);
+        transition: 0.12s;
+      }
+      .tog.on {
+        background: #2a2318;
+        color: var(--accent);
+        border-color: #4a3a1e;
+      }
+      .fpsg {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+      .fpsg .fl2 {
+        font-family: var(--mono);
+        font-size: 9px;
+        letter-spacing: 0.1em;
+        color: var(--dim);
+      }
+      #fpsRange {
+        width: 92px;
+      }
+      #fpsNum {
+        width: 46px;
+        padding: 5px 6px;
+        text-align: center;
+      }
+
+      /* filmstrip */
+      #filmstrip {
+        flex: none;
+        height: 122px;
+        overflow-x: auto;
+        overflow-y: hidden;
+        background: var(--panel);
+        border-top: 1px solid var(--line);
+      }
+      #thumbs {
+        display: flex;
+        gap: 9px;
+        padding: 11px 13px;
+        height: 100%;
+        align-items: flex-start;
+      }
+      .thumb {
+        flex: none;
+        width: 94px;
+        cursor: pointer;
+      }
+      .tcanvas {
+        position: relative;
+        height: 78px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line2);
+        border-radius: 7px;
+        background: repeating-conic-gradient(#1a1a20 0 25%, #22222a 0 50%) 0
+          0/12px 12px;
+        transition: border-color 0.12s;
+      }
+      .thumb:hover .tcanvas {
+        border-color: var(--muted);
+      }
+      .thumb.sel .tcanvas,
+      .thumb.now .tcanvas {
+        border-color: var(--accent);
+      }
+      .tcanvas canvas {
+        image-rendering: pixelated;
+      }
+      .tdl {
+        position: absolute;
+        top: 3px;
+        right: 3px;
+        width: 20px;
+        height: 20px;
+        border-radius: 5px;
+        display: none;
+        place-items: center;
+        background: rgba(13, 13, 16, 0.85);
+        color: var(--muted);
+        border: 1px solid var(--line2);
+      }
+      .thumb:hover .tdl {
+        display: grid;
+      }
+      .tdl:hover {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+      .tcap {
+        display: flex;
+        gap: 6px;
+        justify-content: center;
+        font-family: var(--mono);
+        font-size: 8.8px;
+        color: var(--dim);
+        margin-top: 4px;
+      }
+      .tcap b {
+        color: var(--muted);
+        font-weight: 500;
+      }
+      .thumb.now .tcap b {
+        color: var(--accent);
+      }
+      .fsempty {
+        align-self: center;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--dim);
+        padding: 0 6px;
+      }
+
+      /* checks */
+      #checksWrap {
+        flex: none;
+        background: var(--panel);
+        border-top: 1px solid var(--line);
+      }
+      #checksBar {
+        display: flex;
+        align-items: center;
+        gap: 18px;
+        padding: 8px 16px;
+        cursor: pointer;
+        user-select: none;
+      }
+      .cksum {
+        font-family: var(--mono);
+        font-size: 10.5px;
+        color: var(--muted);
+        display: flex;
+        gap: 6px;
+        align-items: baseline;
+      }
+      .cksum b {
+        font-size: 13px;
+        font-weight: 700;
+      }
+      .cok {
+        color: var(--ok);
+      }
+      .cwarn {
+        color: var(--warn);
+      }
+      .cfail {
+        color: var(--fail);
+      }
+      .cktitle {
+        flex: 1;
+        font-family: var(--mono);
+        font-size: 9.5px;
+        letter-spacing: 0.08em;
+        color: var(--dim);
+        text-align: right;
+      }
+      #ckToggle {
+        width: 24px;
+        height: 24px;
+        color: var(--dim);
+        transition: transform 0.15s;
+      }
+      #checksWrap.open #ckToggle {
+        transform: rotate(180deg);
+      }
+      #checksPanel {
+        display: none;
+        max-height: 198px;
+        overflow-y: auto;
+        border-top: 1px solid var(--line);
+        padding: 6px 16px 10px;
+      }
+      #checksWrap.open #checksPanel {
+        display: block;
+      }
+      .ck {
+        display: grid;
+        grid-template-columns: 20px 128px 1fr;
+        gap: 8px;
+        align-items: baseline;
+        padding: 5px 0;
+        border-bottom: 1px solid #1c1c22;
+      }
+      .ck:last-child {
+        border-bottom: none;
+      }
+      .ck .cki {
+        display: flex;
+        align-self: center;
+      }
+      .ck.ok .cki {
+        color: var(--ok);
+      }
+      .ck.warn .cki {
+        color: var(--warn);
+      }
+      .ck.fail .cki {
+        color: var(--fail);
+      }
+      .ckid {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--muted);
+      }
+      .ckm {
+        font-family: var(--mono);
+        font-size: 10px;
+        color: #b6b2a6;
+        line-height: 1.5;
+      }
+      .ck.none {
+        grid-template-columns: 1fr;
+        font-family: var(--mono);
+        font-size: 10px;
+        color: var(--dim);
+        padding: 8px 0;
+      }
+
+      /* toast */
+      #toasts {
+        position: fixed;
+        right: 16px;
+        bottom: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        z-index: 120;
+      }
+      .toast {
+        font-family: var(--mono);
+        font-size: 11px;
+        background: var(--panel2);
+        border: 1px solid var(--line2);
+        border-left: 3px solid var(--muted);
+        border-radius: 7px;
+        padding: 10px 14px;
+        max-width: 340px;
+        animation: tin 0.18s ease-out;
+      }
+      .toast.ok {
+        border-left-color: var(--ok);
+      }
+      .toast.warn {
+        border-left-color: var(--warn);
+      }
+      .toast.fail {
+        border-left-color: var(--fail);
+      }
+      .toast.out {
+        opacity: 0;
+        transform: translateX(12px);
+        transition: 0.3s;
+      }
+      @keyframes tin {
+        from {
+          opacity: 0;
+          transform: translateY(8px);
+        }
+      }
+
+      @media (max-width: 960px) {
+        #app {
+          grid-template-columns: 248px 1fr;
+        }
+        .fpsg #fpsRange {
+          width: 64px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header id="topbar">
+      <div class="brand">
+        <svg width="27" height="27" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M12 2l9 5-9 5-9-5z" fill="#ffd29e" />
+          <path d="M3 7l9 5v10l-9-5z" fill="#ffb454" />
+          <path d="M21 7l-9 5v10l9-5z" fill="#c97b2e" />
+        </svg>
+        <div>
+          <h1>FRAMEFORGE</h1>
+          <small>editor animasi · isometric-game-skills §18/§19</small>
+        </div>
+      </div>
+      <div class="sp"></div>
+      <div class="pill idle" id="statusPill">SIAP</div>
+      <button class="btn primary" id="btnZip">
+        <span id="zipIco"></span>Unduh semua .zip
+      </button>
+    </header>
+
+    <div id="app">
+      <aside id="sidebar">
+        <section class="section">
+          <div class="sec-h">Input <em>— PNG transparan</em></div>
+          <div id="srcInfo">belum ada file — pilih atau seret PNG</div>
+          <div class="btnrow">
+            <button class="btn" data-pick>
+              <span data-ic="upload"></span>Pilih PNG…
+            </button>
+            <button class="btn ghost" data-demo="clean">demo bersih</button>
+            <button class="btn ghost" data-demo="drift">demo drift</button>
+          </div>
+          <div class="mini">
+            Input harus PNG straight-alpha multi-frame (strip/grid), tanpa
+            background. Cutout tidak diperlukan.
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="sec-h">Pembagian frame <em>— §18.1</em></div>
+          <label class="fld"
+            ><span class="fl">Layout</span>
+            <div class="seg" id="segLayout">
+              <button data-v="auto" class="on">auto</button>
+              <button data-v="strip-h">strip H</button>
+              <button data-v="strip-v">strip V</button>
+              <button data-v="grid">grid</button>
+            </div>
+          </label>
+          <div class="row" id="rowGrid" style="display: none">
+            <label class="fld"
+              ><span class="fl">Kolom</span
+              ><input
+                type="number"
+                data-p="cols"
+                data-auto
+                min="1"
+                placeholder="auto"
+            /></label>
+            <label class="fld"
+              ><span class="fl">Baris</span
+              ><input
+                type="number"
+                data-p="rows"
+                data-auto
+                min="1"
+                placeholder="auto"
+            /></label>
+          </div>
+          <div class="row">
+            <label class="fld"
+              ><span class="fl">Jumlah frame</span
+              ><input
+                type="number"
+                data-p="frames"
+                data-auto
+                min="1"
+                placeholder="auto"
+            /></label>
+            <label class="fld"
+              ><span class="fl">Gap antar frame</span
+              ><input type="number" data-p="gap" min="0" max="64" value="0"
+            /></label>
+          </div>
+          <label class="fld"
+            ><span class="fl">Ukuran frame (W × H)</span>
+            <div class="row" style="margin-bottom: 0">
+              <input
+                type="number"
+                data-p="frameW"
+                data-auto
+                min="1"
+                placeholder="auto"
+              />
+              <input
+                type="number"
+                data-p="frameH"
+                data-auto
+                min="1"
+                placeholder="auto"
+              />
+            </div>
+            <div id="fsNote"></div>
+          </label>
+          <label class="fld"
+            ><span class="fl">Ambang alfa (bbox konten)</span
+            ><input type="number" data-p="alphaTh" min="1" max="254" value="12"
+          /></label>
+          <div class="detected" id="detInfo">—</div>
+          <ul id="notesList"></ul>
+          <div class="mini">
+            Auto-tebak memakai celah transparan antar frame. Jika frame saling
+            menempel, isi jumlah frame (pembagian rata) atau ukuran frame.
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="sec-h">Kanvas &amp; anchor <em>— §18.2–18.4</em></div>
+          <div class="chips" id="presetChips">
+            <button class="chip on" data-preset="auto">auto · bbox</button>
+            <button class="chip" data-preset="tile">tile 128×64</button>
+            <button class="chip" data-preset="object">objek 128×160</button>
+            <button class="chip" data-preset="character">karakter</button>
+            <button class="chip" data-preset="building">gedung 256×320</button>
+          </div>
+          <div class="row">
+            <label class="fld"
+              ><span class="fl">Kanvas W</span
+              ><input
+                type="number"
+                data-p="canvasW"
+                data-auto
+                min="1"
+                placeholder="auto"
+            /></label>
+            <label class="fld"
+              ><span class="fl">Kanvas H</span
+              ><input
+                type="number"
+                data-p="canvasH"
+                data-auto
+                min="1"
+                placeholder="auto"
+            /></label>
+          </div>
+          <label class="fld"
+            ><span class="fl">Mode anchor</span>
+            <div class="seg" id="segAnchor">
+              <button data-v="bottom-center" class="on">bottom-center</button>
+              <button data-v="center">center</button>
+            </div>
+          </label>
+          <div class="row">
+            <label class="fld"
+              ><span class="fl">Anchor X</span
+              ><input
+                type="number"
+                data-p="anchorX"
+                data-auto
+                min="0"
+                placeholder="auto"
+            /></label>
+            <label class="fld"
+              ><span class="fl">Anchor Y</span
+              ><input
+                type="number"
+                data-p="anchorY"
+                data-auto
+                min="0"
+                placeholder="auto"
+            /></label>
+          </div>
+          <div class="row">
+            <label class="fld"
+              ><span class="fl">Sink (0–6)</span
+              ><input type="number" data-p="sink" min="0" max="6" value="6"
+            /></label>
+            <label class="fld"
+              ><span class="fl">Pad ekstra</span
+              ><input type="number" data-p="pad" min="0" max="32" value="0"
+            /></label>
+          </div>
+          <div class="row">
+            <label class="fld"
+              ><span class="fl">Skala seragam</span
+              ><input
+                type="number"
+                data-p="scale"
+                min="0.25"
+                max="8"
+                step="0.25"
+                value="1"
+            /></label>
+            <label class="fld"
+              ><span class="fl">Resample</span>
+              <div class="seg" id="segResample">
+                <button data-v="nearest" class="on">nearest</button>
+                <button data-v="bilinear">bilinear</button>
+              </div>
+            </label>
+          </div>
+          <div class="detected" id="geoInfo">—</div>
+          <div class="mini">
+            Prioritas §18.4: auto (bbox + sink + pad) → preset → angka manual.
+            Semua frame di-scale seragam — tidak pernah sebagian (§18.2.3).
+          </div>
+        </section>
+
+        <section class="section">
+          <div class="sec-h">Unduhan <em>— §18.5</em></div>
+          <label class="fld"
+            ><span class="fl">Nama animasi</span
+            ><input
+              type="text"
+              data-p="name"
+              placeholder="fire_loop"
+              spellcheck="false"
+          /></label>
+          <div class="dlgrid">
+            <button class="btn" id="btnSheet">
+              <span data-ic="img"></span>spritesheet.png
+            </button>
+            <button class="btn" id="btnJson">
+              <span data-ic="json"></span>anim.json
+            </button>
+            <button class="btn" id="btnGif">
+              <span data-ic="gif"></span>preview.gif
+            </button>
+            <button class="btn" id="btnOnion">
+              <span data-ic="onion"></span>preview_onion
+            </button>
+            <button class="btn" id="btnEdge">
+              <span data-ic="edge"></span>preview_edge
+            </button>
+            <button class="btn" id="btnCopy">
+              <span data-ic="copy"></span>salin JSON
+            </button>
+          </div>
+          <details>
+            <summary>pratinjau anim.json</summary>
+            <pre id="jsonPre">// muat PNG untuk menghasilkan anim.json</pre>
+          </details>
+        </section>
+      </aside>
+
+      <main id="main">
+        <nav id="tabs">
+          <button data-view="anim" class="on">Animasi</button>
+          <button data-view="onion">Onion</button>
+          <button data-view="edge">Edge 400%</button>
+          <button data-view="sheet">Sheet</button>
+          <button data-view="source">Sumber</button>
+        </nav>
+
+        <div id="vpWrap">
+          <canvas id="vp"></canvas>
+          <div id="hudInfo">muat PNG untuk mulai</div>
+          <div id="zoomCtl">
+            <button id="zOut" title="perkecil">−</button>
+            <span id="zVal">100%</span>
+            <button id="zIn" title="perbesar">+</button>
+            <button id="zFit" title="fit (klik-dua)">FIT</button>
+          </div>
+          <div id="hints">
+            spasi putar · ← → frame · 1–5 tab · scroll zoom · klik-seret pan ·
+            klik-dua fit
+          </div>
+          <div id="errOverlay" class="hidden">
+            <div class="err-panel">
+              <span id="errIco"></span>
+              <div>
+                <b>Pipeline gagal</b>
+                <p id="errMsg"></p>
+              </div>
+            </div>
+          </div>
+          <div id="dropHero">
+            <div class="hero-panel">
+              <svg
+                width="46"
+                height="46"
+                viewBox="0 0 24 24"
+                aria-hidden="true"
+              >
+                <path d="M12 2l9 5-9 5-9-5z" fill="#ffd29e" />
+                <path d="M3 7l9 5v10l-9-5z" fill="#ffb454" />
+                <path d="M21 7l-9 5v10l9-5z" fill="#c97b2e" />
+              </svg>
+              <h2>Jatuhkan PNG multi-frame</h2>
+              <p>
+                Satu PNG transparan berisi 2–8 frame — dipecah otomatis, anchor
+                dirapikan bottom-center, loop dicek seamless, lalu spritesheet +
+                anim.json + GIF siap pakai.
+              </p>
+              <div class="hero-flow">
+                <span>split</span><i>→</i><span>trim</span><i>→</i
+                ><span>anchor</span><i>→</i><span>loop</span><i>→</i
+                ><span>sheet</span>
+              </div>
+              <button class="btn primary" data-pick>
+                <span data-ic="upload"></span>Pilih PNG…
+              </button>
+              <div class="hero-alt">
+                atau seret file ke mana saja di jendela ini
+              </div>
+              <div class="hero-demo">
+                <span>coba demo:</span>
+                <button class="btn ghost" data-demo="clean">
+                  brazier — loop bersih
+                </button>
+                <button class="btn ghost" data-demo="drift">
+                  kaki drift — penuh peringatan
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div id="playbar" class="dead">
+          <div class="transport">
+            <button class="ibtn" id="btnFirst" title="frame pertama"></button>
+            <button
+              class="ibtn"
+              id="btnPrev"
+              title="mundur 1 frame (←)"
+            ></button>
+            <button
+              class="ibtn play"
+              id="btnPlay"
+              title="putar / jeda (spasi)"
+            ></button>
+            <button class="ibtn" id="btnNext" title="maju 1 frame (→)"></button>
+            <button class="ibtn" id="btnLast" title="frame terakhir"></button>
+          </div>
+          <input type="range" id="scrub" min="0" max="0" value="0" />
+          <div id="frameCtr">— / —</div>
+          <div class="ptogs">
+            <button
+              class="tog"
+              id="btnLoop"
+              title="loop playback (§18.1)"
+            ></button>
+            <button
+              class="tog"
+              id="btnPong"
+              title="pingpong — frame terakhir tidak bersebelahan dengan frame 0"
+            ></button>
+          </div>
+          <div class="fpsg">
+            <span class="fl2">FPS</span>
+            <input
+              type="range"
+              id="fpsRange"
+              data-p="fps"
+              min="1"
+              max="30"
+              step="1"
+              value="10"
+            />
+            <input
+              type="number"
+              id="fpsNum"
+              data-p="fps"
+              min="1"
+              max="60"
+              step="1"
+              value="10"
+            />
+          </div>
+        </div>
+
+        <div id="filmstrip">
+          <div id="thumbs">
+            <span class="fsempty">filmstrip frame akan muncul di sini</span>
+          </div>
+        </div>
+
+        <div id="checksWrap">
+          <div id="checksBar">
+            <span class="cksum"><b class="cok" id="ckOk">0</b> ok</span>
+            <span class="cksum"
+              ><b class="cwarn" id="ckWarn">0</b> peringatan</span
+            >
+            <span class="cksum"><b class="cfail" id="ckFail">0</b> gagal</span>
+            <span class="cktitle"
+              >checklist §19 — split · anchor · loop · transparansi</span
+            >
+            <button id="ckToggle" class="ibtn" title="buka / tutup"></button>
+          </div>
+          <div id="checksPanel"></div>
+        </div>
+      </main>
+    </div>
+
+    <div id="toasts"></div>
+    <input type="file" id="fileInput" hidden accept="image/png" />
+
+    <script>
+      "use strict";
+      /* =====================================================================
+   FRAMEFORGE — editor animasi aset isometrik (§18 spesifikasi, §19 checklist)
+   Split → trim → kanvas seragam anchor → cek loop → sheet + JSON + GIF.
+   Semua berjalan lokal di browser, tanpa dependensi.
+===================================================================== */
+
+      const $ = (id) => document.getElementById(id);
+      const esc = (s) =>
+        String(s).replace(
+          /[&<>"]/g,
+          (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c],
+        );
+      const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+
+      /* ------------------------------ ikon SVG ------------------------------ */
+      const ICONS = {
+        play: '<path d="M8 5.5v13l11-6.5z" fill="currentColor" stroke="none"/>',
+        pause:
+          '<path d="M7.5 5h3.4v14H7.5zM13.1 5h3.4v14h-3.4z" fill="currentColor" stroke="none"/>',
+        first:
+          '<path d="M6.5 5h2.2v14H6.5zM18 5.5v13l-9-6.5z" fill="currentColor" stroke="none"/>',
+        last: '<path d="M15.3 5h2.2v14h-2.2zM6 5.5l9 6.5-9 6.5z" fill="currentColor" stroke="none"/>',
+        prev: '<path d="M15.5 6.2v11.6L7.5 12z" fill="currentColor" stroke="none"/>',
+        next: '<path d="M8.5 6.2v11.6L16.5 12z" fill="currentColor" stroke="none"/>',
+        loop: '<path d="M4 12V9.5A3.5 3.5 0 017.5 6H19"/><path d="M16 3l3 3-3 3"/><path d="M20 12v2.5a3.5 3.5 0 01-3.5 3.5H5"/><path d="M8 21l-3-3 3-3"/>',
+        pong: '<path d="M6 8h12"/><path d="M15 5l3 3-3 3"/><path d="M18 16H6"/><path d="M9 13l-3 3 3 3"/>',
+        upload:
+          '<path d="M12 16V4"/><path d="M7 9l5-5 5 5"/><path d="M4 20h16"/>',
+        download:
+          '<path d="M12 4v12"/><path d="M7 11l5 5 5-5"/><path d="M4 20h16"/>',
+        box: '<path d="M3 8l9-5 9 5v8l-9 5-9-5z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
+        copy: '<rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V6a2 2 0 012-2h9"/>',
+        ok: '<circle cx="12" cy="12" r="9"/><path d="M8.3 12.4l2.5 2.5 5-5.4"/>',
+        warn: '<path d="M12 3.5L2.5 20h19z"/><path d="M12 10v4.5"/><path d="M12 17.4v.1"/>',
+        fail: '<circle cx="12" cy="12" r="9"/><path d="M9 9l6 6M15 9l-6 6"/>',
+        chev: '<path d="M6 9l6 6 6-6"/>',
+        img: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 15l5-4 4 3 4-4 5 5"/><circle cx="9" cy="9" r="1.4"/>',
+        json: '<path d="M9 5H7a2 2 0 00-2 2v3l-2 2 2 2v3a2 2 0 002 2h2"/><path d="M15 5h2a2 2 0 012 2v3l2 2-2 2v3a2 2 0 01-2 2h-2"/>',
+        gif: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5a3 3 0 100 5"/><path d="M14 9.5v5M14 9.5h2.5M14 12h2"/>',
+        onion: '<circle cx="10" cy="12" r="6"/><circle cx="14" cy="12" r="6"/>',
+        edge: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 3v18"/>',
+      };
+      function icon(n, s = 16) {
+        return `<svg width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[n] || ""}</svg>`;
+      }
+
+      /* ------------------------------ state --------------------------------- */
+      const S = {
+        src: null,
+        fileName: "",
+        params: {
+          layout: "auto",
+          frames: 0,
+          frameW: 0,
+          frameH: 0,
+          cols: 0,
+          rows: 0,
+          gap: 0,
+          alphaTh: 12,
+          fps: 10,
+          loop: true,
+          pingpong: false,
+          name: "",
+          canvasW: 0,
+          canvasH: 0,
+          anchor: "bottom-center",
+          anchorX: 0,
+          anchorY: 0,
+          sink: 6,
+          pad: 0,
+          scale: 1,
+          resample: "nearest",
+        },
+        result: null,
+        view: "anim",
+        frame: 0,
+        dir: 1,
+        playing: false,
+        zoom: 1,
+        panX: 0,
+        panY: 0,
+        dpr: 1,
+        ckOpen: false,
+      };
+      const ready = () => !!(S.result && !S.result.error);
+
+      /* ------------------------------ GIF encoder --------------------------- */
+      function ceilLog2(n) {
+        let b = 0;
+        while (1 << b < n) b++;
+        return b;
+      }
+
+      class ByteWriter {
+        constructor() {
+          this.a = new Uint8Array(4096);
+          this.n = 0;
+        }
+        need(k) {
+          if (this.n + k > this.a.length) {
+            let c = this.a.length * 2;
+            while (c < this.n + k) c *= 2;
+            const b = new Uint8Array(c);
+            b.set(this.a);
+            this.a = b;
+          }
+        }
+        u8(v) {
+          this.need(1);
+          this.a[this.n++] = v & 255;
+        }
+        u16(v) {
+          this.u8(v);
+          this.u8(v >> 8);
+        }
+        str(s) {
+          for (let i = 0; i < s.length; i++) this.u8(s.charCodeAt(i));
+        }
+        bytes(arr) {
+          this.need(arr.length);
+          this.a.set(arr, this.n);
+          this.n += arr.length;
+        }
+        done() {
+          return this.a.subarray(0, this.n);
+        }
+      }
+
+      /* LZW variabel-lebar (bump ukuran kode + reset tabel saat penuh) */
+      function lzwEncode(indices, mcs) {
+        const clear = 1 << mcs,
+          eoi = clear + 1;
+        let codeSize = mcs + 1,
+          next = eoi + 1,
+          dict = new Map();
+        const out = [];
+        let acc = 0,
+          accBits = 0;
+        const emit = (c) => {
+          acc |= c << accBits;
+          accBits += codeSize;
+          while (accBits >= 8) {
+            out.push(acc & 255);
+            acc >>>= 8;
+            accBits -= 8;
+          }
+        };
+        emit(clear);
+        if (!indices.length) {
+          emit(eoi);
+          if (accBits > 0) out.push(acc & 255);
+          return out;
+        }
+        let prev = indices[0];
+        for (let i = 1; i < indices.length; i++) {
+          const k = indices[i],
+            key = (prev << 8) | k,
+            hit = dict.get(key);
+          if (hit !== undefined) {
+            prev = hit;
+            continue;
+          }
+          emit(prev);
+          if (next < 4096) {
+            if (next >= 1 << codeSize && codeSize < 12) codeSize++;
+            dict.set(key, next++);
+          } else {
+            emit(clear);
+            dict = new Map();
+            next = eoi + 1;
+            codeSize = mcs + 1;
+          }
+          prev = k;
+        }
+        emit(prev);
+        emit(eoi);
+        if (accBits > 0) out.push(acc & 255);
+        return out;
+      }
+
+      /* median-cut: ≤255 warna + 1 slot transparan */
+      function medianCut(hist, maxColors) {
+        const entries = [];
+        for (const [key, e] of hist)
+          entries.push({
+            key,
+            rs: e[0],
+            gs: e[1],
+            bs: e[2],
+            n: e[3],
+            kr: (key >> 10) & 31,
+            kg: (key >> 5) & 31,
+            kb: key & 31,
+          });
+        const chans = ["kr", "kg", "kb"];
+        const rangeOf = (box, ch) => {
+          let lo = 31,
+            hi = 0;
+          for (const e of box) {
+            if (e[ch] < lo) lo = e[ch];
+            if (e[ch] > hi) hi = e[ch];
+          }
+          return hi - lo;
+        };
+        const boxes = [entries];
+        while (boxes.length < maxColors) {
+          let bi = -1,
+            best = 0;
+          for (let i = 0; i < boxes.length; i++) {
+            const box = boxes[i];
+            if (box.length < 2) continue;
+            let widest = 0;
+            for (const ch of chans) widest = Math.max(widest, rangeOf(box, ch));
+            if (!widest) continue;
+            let n = 0;
+            for (const e of box) n += e.n;
+            if (n > best) {
+              best = n;
+              bi = i;
+            }
+          }
+          if (bi < 0) break;
+          const box = boxes[bi];
+          let ch = "kr",
+            w = -1;
+          for (const c of chans) {
+            const r = rangeOf(box, c);
+            if (r > w) {
+              w = r;
+              ch = c;
+            }
+          }
+          box.sort((a, b) => a[ch] - b[ch]);
+          let total = 0;
+          for (const e of box) total += e.n;
+          let acc2 = 0,
+            si = box.length - 1;
+          for (let i = 0; i < box.length - 1; i++) {
+            acc2 += box[i].n;
+            if (acc2 >= total / 2) {
+              si = i + 1;
+              break;
+            }
+          }
+          boxes.splice(bi, 1, box.slice(0, si), box.slice(si));
+        }
+        const palette = [],
+          keyToIndex = new Map();
+        for (const box of boxes) {
+          let rs = 0,
+            gs = 0,
+            bs = 0,
+            n = 0;
+          for (const e of box) {
+            rs += e.rs;
+            gs += e.gs;
+            bs += e.bs;
+            n += e.n;
+          }
+          const idx = palette.length;
+          palette.push(
+            n
+              ? [Math.round(rs / n), Math.round(gs / n), Math.round(bs / n)]
+              : [0, 0, 0],
+          );
+          for (const e of box) keyToIndex.set(e.key, idx);
+        }
+        return { palette, keyToIndex };
+      }
+
+      /* frames: [{w,h,d:Uint8ClampedArray}] ukuran seragam; khusus preview (§18.5) */
+      function encodeGif(frames, fps) {
+        const W = frames[0].w,
+          H = frames[0].h;
+        const keyOf = (r, g, b) =>
+          ((r >> 3) << 10) | ((g >> 3) << 5) | (b >> 3);
+        const hist = new Map();
+        for (const f of frames) {
+          const d = f.d;
+          for (let i = 0; i < W * H; i++) {
+            if (d[i * 4 + 3] < 128) continue; // alpha 1-bit untuk preview
+            const k = keyOf(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]);
+            let e = hist.get(k);
+            if (!e) {
+              e = [0, 0, 0, 0];
+              hist.set(k, e);
+            }
+            e[0] += d[i * 4];
+            e[1] += d[i * 4 + 1];
+            e[2] += d[i * 4 + 2];
+            e[3]++;
+          }
+        }
+        let palette, keyToIndex;
+        if (hist.size <= 255) {
+          // exact untuk pixel-art ≤255 warna
+          palette = [];
+          keyToIndex = new Map();
+          for (const [k, e] of hist) {
+            keyToIndex.set(k, palette.length);
+            palette.push([
+              Math.round(e[0] / e[3]),
+              Math.round(e[1] / e[3]),
+              Math.round(e[2] / e[3]),
+            ]);
+          }
+        } else ({ palette, keyToIndex } = medianCut(hist, 255));
+        const transIdx = palette.length,
+          total = palette.length + 1;
+        const mcs = Math.max(2, ceilLog2(total));
+        const gctCount = Math.max(2, 1 << ceilLog2(total));
+        const delay = Math.max(2, Math.round(100 / fps));
+        const bw = new ByteWriter();
+        bw.str("GIF89a");
+        bw.u16(W);
+        bw.u16(H);
+        bw.u8(0xf0 | (ceilLog2(gctCount) - 1));
+        bw.u8(0);
+        bw.u8(0);
+        for (let i = 0; i < gctCount; i++) {
+          const c = i < palette.length ? palette[i] : [0, 0, 0];
+          bw.u8(c[0]);
+          bw.u8(c[1]);
+          bw.u8(c[2]);
+        }
+        bw.u8(0x21);
+        bw.u8(0xff);
+        bw.u8(11);
+        bw.str("NETSCAPE2.0");
+        bw.u8(3);
+        bw.u8(1);
+        bw.u16(0);
+        bw.u8(0); // loop tanpa batas
+        const idx = new Uint8Array(W * H);
+        for (const f of frames) {
+          const d = f.d;
+          for (let i = 0; i < W * H; i++) {
+            if (d[i * 4 + 3] < 128) {
+              idx[i] = transIdx;
+              continue;
+            }
+            const j = keyToIndex.get(
+              keyOf(d[i * 4], d[i * 4 + 1], d[i * 4 + 2]),
+            );
+            idx[i] = j === undefined ? transIdx : j;
+          }
+          bw.u8(0x21);
+          bw.u8(0xf9);
+          bw.u8(4);
+          bw.u8((1 << 2) | 1);
+          bw.u16(delay);
+          bw.u8(transIdx);
+          bw.u8(0); // GCE
+          bw.u8(0x2c);
+          bw.u16(0);
+          bw.u16(0);
+          bw.u16(W);
+          bw.u16(H);
+          bw.u8(0);
+          bw.u8(mcs);
+          const data = lzwEncode(idx, mcs);
+          for (let i = 0; i < data.length; i += 255) {
+            const n = Math.min(255, data.length - i);
+            bw.u8(n);
+            bw.bytes(data.subarray(i, i + n));
+          }
+          bw.u8(0);
+        }
+        bw.u8(0x3b);
+        return bw.done();
+      }
+
+      /* ------------------------------ ZIP (store) --------------------------- */
+      const CRC_T = (() => {
+        const t = new Uint32Array(256);
+        for (let n = 0; n < 256; n++) {
+          let c = n;
+          for (let k = 0; k < 8; k++)
+            c = c & 1 ? 0xedb88320 ^ (c >>> 1) : c >>> 1;
+          t[n] = c >>> 0;
+        }
+        return t;
+      })();
+      function crc32(u8) {
+        let c = 0xffffffff;
+        for (let i = 0; i < u8.length; i++)
+          c = CRC_T[(c ^ u8[i]) & 255] ^ (c >>> 8);
+        return (c ^ 0xffffffff) >>> 0;
+      }
+      function buildZip(files) {
+        const enc = new TextEncoder(),
+          parts = [],
+          central = [];
+        let offset = 0;
+        const now = new Date();
+        const dT =
+          (now.getHours() << 11) |
+          (now.getMinutes() << 5) |
+          (now.getSeconds() >>> 1);
+        const dD =
+          (((now.getFullYear() - 1980) & 127) << 9) |
+          ((now.getMonth() + 1) << 5) |
+          now.getDate();
+        for (const f of files) {
+          const name = enc.encode(f.name),
+            crc = crc32(f.data),
+            len = f.data.length;
+          const lh = new DataView(new ArrayBuffer(30));
+          lh.setUint32(0, 0x04034b50, true);
+          lh.setUint16(4, 20, true);
+          lh.setUint16(8, 0, true);
+          lh.setUint16(10, dT, true);
+          lh.setUint16(12, dD, true);
+          lh.setUint32(14, crc, true);
+          lh.setUint32(18, len, true);
+          lh.setUint32(22, len, true);
+          lh.setUint16(26, name.length, true);
+          parts.push(new Uint8Array(lh.buffer), name, f.data);
+          const ch = new DataView(new ArrayBuffer(46));
+          ch.setUint32(0, 0x02014b50, true);
+          ch.setUint16(4, 20, true);
+          ch.setUint16(6, 20, true);
+          ch.setUint16(12, dT, true);
+          ch.setUint16(14, dD, true);
+          ch.setUint32(16, crc, true);
+          ch.setUint32(20, len, true);
+          ch.setUint32(24, len, true);
+          ch.setUint16(28, name.length, true);
+          ch.setUint32(42, offset, true);
+          central.push(new Uint8Array(ch.buffer), name);
+          offset += 30 + name.length + len;
+        }
+        const cdSize = central.reduce((s, p) => s + p.length, 0);
+        const eo = new DataView(new ArrayBuffer(22));
+        eo.setUint32(0, 0x06054b50, true);
+        eo.setUint16(8, files.length, true);
+        eo.setUint16(10, files.length, true);
+        eo.setUint32(12, cdSize, true);
+        eo.setUint32(16, offset, true);
+        return new Blob([...parts, ...central, new Uint8Array(eo.buffer)], {
+          type: "application/zip",
+        });
+      }
+
+      /* ------------------------------ operasi piksel ------------------------ */
+      /* frame/imgd = {w,h,d:Uint8ClampedArray} */
+
+      function bboxOf(f, th) {
+        const W = f.w,
+          H = f.h,
+          d = f.d;
+        let minX = W,
+          minY = H,
+          maxX = -1,
+          maxY = -1;
+        for (let y = 0; y < H; y++) {
+          const base = y * W * 4;
+          for (let x = 0; x < W; x++) {
+            if (d[base + x * 4 + 3] > th) {
+              if (x < minX) minX = x;
+              if (x > maxX) maxX = x;
+              if (y < minY) minY = y;
+              if (y > maxY) maxY = y;
+            }
+          }
+        }
+        return maxX < 0
+          ? null
+          : { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 };
+      }
+
+      /* potong integer murni — tanpa resample (§18.2.1) */
+      function cropFrame(src, b) {
+        const d = new Uint8ClampedArray(b.w * b.h * 4);
+        for (let r = 0; r < b.h; r++) {
+          const s = ((b.y + r) * src.w + b.x) * 4;
+          d.set(src.d.subarray(s, s + b.w * 4), r * b.w * 4);
+        }
+        return { w: b.w, h: b.h, d };
+      }
+
+      /* scale seragam; bilinear memakai premultiply agar bebas fringe (§19) */
+      function scaleFrame(f, s, mode) {
+        if (s === 1) return f;
+        const w = Math.max(1, Math.round(f.w * s)),
+          h = Math.max(1, Math.round(f.h * s));
+        const out = new Uint8ClampedArray(w * h * 4);
+        if (mode === "bilinear") {
+          for (let y = 0; y < h; y++) {
+            const fy = clamp((y + 0.5) / s - 0.5, 0, f.h - 1);
+            const y0 = Math.floor(fy),
+              y1 = Math.min(f.h - 1, y0 + 1),
+              ty = fy - y0;
+            for (let x = 0; x < w; x++) {
+              const fx = clamp((x + 0.5) / s - 0.5, 0, f.w - 1);
+              const x0 = Math.floor(fx),
+                x1 = Math.min(f.w - 1, x0 + 1),
+                tx = fx - x0;
+              const P = (xx, yy) => {
+                const i = (yy * f.w + xx) * 4,
+                  a = f.d[i + 3] / 255;
+                return [f.d[i] * a, f.d[i + 1] * a, f.d[i + 2] * a, a];
+              };
+              const c00 = P(x0, y0),
+                c10 = P(x1, y0),
+                c01 = P(x0, y1),
+                c11 = P(x1, y1);
+              const L = (a, b, t) => a + (b - a) * t;
+              const pr = L(L(c00[0], c10[0], tx), L(c01[0], c11[0], tx), ty);
+              const pg = L(L(c00[1], c10[1], tx), L(c01[1], c11[1], tx), ty);
+              const pb = L(L(c00[2], c10[2], tx), L(c01[2], c11[2], tx), ty);
+              const pa = L(L(c00[3], c10[3], tx), L(c01[3], c11[3], tx), ty);
+              const o = (y * w + x) * 4;
+              if (pa <= 0) continue;
+              out[o] = pr / pa;
+              out[o + 1] = pg / pa;
+              out[o + 2] = pb / pa;
+              out[o + 3] = pa * 255;
+            }
+          }
+        } else {
+          for (let y = 0; y < h; y++) {
+            const sy = Math.min(f.h - 1, Math.floor((y + 0.5) / s));
+            for (let x = 0; x < w; x++) {
+              const sx = Math.min(f.w - 1, Math.floor((x + 0.5) / s));
+              const i = (sy * f.w + sx) * 4,
+                o = (y * w + x) * 4;
+              out[o] = f.d[i];
+              out[o + 1] = f.d[i + 1];
+              out[o + 2] = f.d[i + 2];
+              out[o + 3] = f.d[i + 3];
+            }
+          }
+        }
+        return { w, h, d: out };
+      }
+
+      /* taruh konten di kanvas seragam, anchor bottom-center / center (§18.2.2) */
+      function placeOnCanvas(content, cw, ch, ax, ay, mode) {
+        const dx = (cw - content.w) >> 1;
+        const dy = mode === "center" ? (ch - content.h) >> 1 : ay - content.h;
+        if (dx < 0 || dy < 0 || dx + content.w > cw || dy + content.h > ch)
+          throw new Error(
+            `konten ${content.w}×${content.h} tidak muat di kanvas ${cw}×${ch} pada anchor (${ax},${ay}) — perbesar kanvas / kecilkan anchorY / naikkan sink`,
+          );
+        const d = new Uint8ClampedArray(cw * ch * 4);
+        for (let r = 0; r < content.h; r++)
+          d.set(
+            content.d.subarray(r * content.w * 4, (r + 1) * content.w * 4),
+            ((dy + r) * cw + dx) * 4,
+          );
+        return { w: cw, h: ch, d };
+      }
+
+      /* MAD + % piksel berubah — untuk cek loop & reposition (§18.2.4–5) */
+      function diffStats(a, b) {
+        const n = a.w * a.h;
+        let sum = 0,
+          changed = 0,
+          minX = 1e9,
+          minY = 1e9,
+          maxX = -1,
+          maxY = -1;
+        for (let i = 0; i < n; i++) {
+          const o = i * 4;
+          const da = Math.abs(a.d[o + 3] - b.d[o + 3]);
+          const dr = Math.abs(a.d[o] - b.d[o]),
+            dg = Math.abs(a.d[o + 1] - b.d[o + 1]),
+            db = Math.abs(a.d[o + 2] - b.d[o + 2]);
+          sum += (da + dr + dg + db) / 4;
+          if (da > 16 || dr > 16 || dg > 16 || db > 16) {
+            changed++;
+            const x = i % a.w,
+              y = (i / a.w) | 0;
+            if (x < minX) minX = x;
+            if (x > maxX) maxX = x;
+            if (y < minY) minY = y;
+            if (y > maxY) maxY = y;
+          }
+        }
+        return {
+          mad: sum / n / 255,
+          changedPct: (changed / n) * 100,
+          bbox:
+            maxX >= 0
+              ? { x: minX, y: minY, w: maxX - minX + 1, h: maxY - minY + 1 }
+              : null,
+        };
+      }
+
+      /* ------------------------------ perencanaan split (§18.1) ------------- */
+      function runsOf(mask) {
+        const out = [];
+        let s = -1;
+        for (let i = 0; i < mask.length; i++) {
+          if (mask[i] && s < 0) s = i;
+          else if (!mask[i] && s >= 0) {
+            out.push([s, i]);
+            s = -1;
+          }
+        }
+        if (s >= 0) out.push([s, mask.length]);
+        return out;
+      }
+      function contentRuns(img, th) {
+        const col = new Uint8Array(img.w),
+          row = new Uint8Array(img.h);
+        for (let y = 0; y < img.h; y++) {
+          const base = y * img.w * 4;
+          for (let x = 0; x < img.w; x++)
+            if (img.d[base + x * 4 + 3] > th) {
+              col[x] = 1;
+              row[y] = 1;
+            }
+        }
+        return { colRuns: runsOf(col), rowRuns: runsOf(row) };
+      }
+      function hasAxis(img, axis, i, th) {
+        if (i < 0) return false;
+        if (axis === "x") {
+          if (i >= img.w) return false;
+          for (let y = 0; y < img.h; y++)
+            if (img.d[(y * img.w + i) * 4 + 3] > th) return true;
+          return false;
+        }
+        if (i >= img.h) return false;
+        const base = i * img.w * 4;
+        for (let x = 0; x < img.w; x++)
+          if (img.d[base + x * 4 + 3] > th) return true;
+        return false;
+      }
+      /* potongan yang menembus konten → frame tetangga bocor / fringe tepi (§18.1) */
+      function checkCuts(img, cuts, gap, th) {
+        const bad = [];
+        for (const c of cuts) {
+          let hit = false;
+          if (gap > 0) {
+            for (let g = 0; g < gap && !hit; g++)
+              if (hasAxis(img, c.axis, c.pos + g, th)) hit = true;
+          } else
+            hit =
+              hasAxis(img, c.axis, c.pos - 1, th) &&
+              hasAxis(img, c.axis, c.pos, th);
+          if (hit) bad.push(c);
+        }
+        return bad;
+      }
+
+      function planCells(img, P) {
+        const W = img.w,
+          H = img.h,
+          gap = P.gap | 0,
+          th = P.th;
+        const notes = [];
+        const done = (layout, cells, cuts) => ({ layout, cells, cuts, notes });
+
+        function evenStrip(axis, n) {
+          const total = axis === "x" ? W : H;
+          const avail = total - (n - 1) * gap;
+          if (avail < n) return null;
+          const size = Math.floor(avail / n),
+            rem = avail - size * n;
+          if (rem > 2) return null; // toleransi ≤2px (§18.1)
+          if (rem > 0)
+            notes.push(
+              `${axis === "x" ? "lebar" : "tinggi"} ${total}px = ${n}×${size}px (gap ${gap}) + sisa ${rem}px — diabaikan, toleransi ≤2px`,
+            );
+          const cells = [],
+            cuts = [];
+          for (let i = 0; i < n; i++) {
+            cells.push(
+              axis === "x"
+                ? { x: i * (size + gap), y: 0, w: size, h: H }
+                : { x: 0, y: i * (size + gap), w: W, h: size },
+            );
+            if (i > 0) cuts.push({ axis, pos: i * (size + gap) - gap });
+          }
+          return done(
+            `${axis === "x" ? "strip-h" : "strip-v"} · pembagian rata ${size}px`,
+            cells,
+            cuts,
+          );
+        }
+
+        /* grid eksplisit cols × rows */
+        if (P.cols > 0 || P.rows > 0) {
+          const C = P.cols || 1,
+            R = P.rows || 1;
+          const cw = Math.floor((W - (C - 1) * gap) / C),
+            chh = Math.floor((H - (R - 1) * gap) / R);
+          if (cw < 1 || chh < 1)
+            throw new Error(
+              `grid ${C}×${R} tidak muat di ${W}×${H} (gap ${gap})`,
+            );
+          if (C * cw + (C - 1) * gap !== W)
+            notes.push(`lebar ${W} tidak habis dibagi ${C} kolom (${cw}px)`);
+          if (R * chh + (R - 1) * gap !== H)
+            notes.push(`tinggi ${H} tidak habis dibagi ${R} baris (${chh}px)`);
+          const cells = [],
+            cuts = [];
+          for (let r = 0; r < R; r++)
+            for (let c = 0; c < C; c++) {
+              cells.push({
+                x: c * (cw + gap),
+                y: r * (chh + gap),
+                w: cw,
+                h: chh,
+              });
+              if (c > 0) cuts.push({ axis: "x", pos: c * (cw + gap) - gap });
+              if (r > 0) cuts.push({ axis: "y", pos: r * (chh + gap) - gap });
+            }
+          let n = cells.length;
+          if (P.frames > 0) {
+            if (P.frames > n)
+              throw new Error(`jumlah frame ${P.frames} > sel grid ${n}`);
+            if (P.frames < n) {
+              notes.push(`hanya ${P.frames} frame pertama dipakai (row-major)`);
+              n = P.frames;
+            }
+          }
+          cells.length = n;
+          return done(`grid ${C}×${R} · sel ${cw}×${chh}`, cells, cuts);
+        }
+
+        /* ukuran frame eksplisit */
+        if (P.frameSize) {
+          const [fw, fh] = P.frameSize;
+          let layout = P.layout;
+          if (layout === "auto" || layout === "grid") {
+            if (H >= fh && H - fh <= 2 && W >= fw) layout = "strip-h";
+            else if (W >= fw && W - fw <= 2 && H >= fh) layout = "strip-v";
+            else if (W % fw === 0 && H % fh === 0) layout = "grid";
+            else
+              throw new Error(
+                `frame ${fw}×${fh} tidak mengisi ${W}×${H} — pilih layout atau isi cols×rows`,
+              );
+          }
+          if (layout === "strip-h" || layout === "strip-v") {
+            const horiz = layout === "strip-h";
+            const along = horiz ? W : H,
+              cross = horiz ? H : W;
+            const cellA = horiz ? fw : fh,
+              cellC = horiz ? fh : fw;
+            if (cross < cellC || cross - cellC > 2)
+              throw new Error(
+                `layout ${layout} dengan frame ${fw}×${fh}: dimensi lintang ${cross}px — tinggi frame tidak seragam (§18.1)`,
+              );
+            const step = cellA + gap;
+            let n = Math.floor((along + gap) / step);
+            if (n < 1) throw new Error("ukuran frame lebih besar dari gambar");
+            const used = n * step - gap;
+            if (used !== along)
+              notes.push(
+                `${horiz ? "lebar" : "tinggi"} ${along}px: ${n} frame ${cellA}px + sisa ${along - used}px (diabaikan)`,
+              );
+            if (P.frames > 0 && P.frames !== n) {
+              if (P.frames > n)
+                throw new Error(
+                  `jumlah frame ${P.frames} > ${n} sel terdeteksi`,
+                );
+              notes.push(`dipakai ${P.frames} frame pertama`);
+              n = P.frames;
+            }
+            const cells = [],
+              cuts = [];
+            for (let i = 0; i < n; i++) {
+              cells.push(
+                horiz
+                  ? { x: i * step, y: 0, w: fw, h: fh }
+                  : { x: 0, y: i * step, w: fw, h: fh },
+              );
+              if (i > 0)
+                cuts.push({ axis: horiz ? "x" : "y", pos: i * step - gap });
+            }
+            return done(`${layout} · frame ${fw}×${fh}`, cells, cuts);
+          }
+          const stepX = fw + gap,
+            stepY = fh + gap;
+          const C = Math.floor((W + gap) / stepX),
+            R = Math.floor((H + gap) / stepY);
+          if (C < 1 || R < 1)
+            throw new Error(`frame ${fw}×${fh} tidak mengisi ${W}×${H}`);
+          if (C * stepX - gap !== W)
+            notes.push(`lebar ${W}px: ${C} kolom ${fw}px + sisa (diabaikan)`);
+          if (R * stepY - gap !== H)
+            notes.push(`tinggi ${H}px: ${R} baris ${fh}px + sisa (diabaikan)`);
+          const cells = [],
+            cuts = [];
+          for (let r = 0; r < R; r++)
+            for (let c = 0; c < C; c++) {
+              cells.push({ x: c * stepX, y: r * stepY, w: fw, h: fh });
+              if (c > 0) cuts.push({ axis: "x", pos: c * stepX - gap });
+              if (r > 0) cuts.push({ axis: "y", pos: r * stepY - gap });
+            }
+          let n = cells.length;
+          if (P.frames > 0) {
+            if (P.frames > n)
+              throw new Error(`jumlah frame ${P.frames} > sel ${n}`);
+            if (P.frames < n) {
+              notes.push(`hanya ${P.frames} frame pertama dipakai`);
+              n = P.frames;
+            }
+          }
+          cells.length = n;
+          return done(`grid ${C}×${R} · sel ${fw}×${fh}`, cells, cuts);
+        }
+
+        /* auto-tebak dari celah transparan */
+        const { colRuns, rowRuns } = contentRuns(img, th);
+
+        const stripFromRuns = (axis) => {
+          if (axis === "x") {
+            const y0 = rowRuns.length === 1 ? rowRuns[0][0] : 0,
+              y1 = rowRuns.length === 1 ? rowRuns[0][1] : H;
+            if (rowRuns.length > 1)
+              notes.push(
+                "beberapa pita konten vertikal — sel memakai tinggi penuh; verifikasi atau isi jumlah/ukuran frame",
+              );
+            return done(
+              `strip-h · ${colRuns.length} run konten`,
+              colRuns.map((r) => ({
+                x: r[0],
+                y: y0,
+                w: r[1] - r[0],
+                h: y1 - y0,
+              })),
+              null,
+            );
+          }
+          const x0 = colRuns.length === 1 ? colRuns[0][0] : 0,
+            x1 = colRuns.length === 1 ? colRuns[0][1] : W;
+          if (colRuns.length > 1)
+            notes.push(
+              "beberapa pita konten horizontal — sel memakai lebar penuh; verifikasi atau isi jumlah/ukuran frame",
+            );
+          return done(
+            `strip-v · ${rowRuns.length} run konten`,
+            rowRuns.map((r) => ({
+              x: x0,
+              y: r[0],
+              w: x1 - x0,
+              h: r[1] - r[0],
+            })),
+            null,
+          );
+        };
+        const gridFromRuns = () => {
+          const cells = [];
+          for (const ry of rowRuns)
+            for (const rx of colRuns)
+              cells.push({
+                x: rx[0],
+                y: ry[0],
+                w: rx[1] - rx[0],
+                h: ry[1] - ry[0],
+              });
+          return done(
+            `grid · ${colRuns.length}×${rowRuns.length} run konten`,
+            cells,
+            null,
+          );
+        };
+
+        if (P.layout === "strip-h" || P.layout === "strip-v") {
+          const axis = P.layout === "strip-h" ? "x" : "y";
+          if (P.frames > 0) {
+            const p = evenStrip(axis, P.frames);
+            if (!p)
+              throw new Error(
+                `tidak bisa membagi ${axis === "x" ? "lebar " + W : "tinggi " + H} jadi ${P.frames} frame rata (gap ${gap}) — isi ukuran frame`,
+              );
+            return p;
+          }
+          if (axis === "x" && colRuns.length > 1) return stripFromRuns("x");
+          if (axis === "y" && rowRuns.length > 1) return stripFromRuns("y");
+          throw new Error(
+            `layout ${P.layout}: tidak ada celah transparan antar frame — isi jumlah frame atau ukuran frame`,
+          );
+        }
+        if (P.layout === "grid") {
+          if (colRuns.length > 1 && rowRuns.length > 1) {
+            notes.push(
+              "grid dari celah transparan — sel kosong (jika ada) akan gagal di cek split.empty",
+            );
+            return gridFromRuns();
+          }
+          throw new Error(
+            "grid: butuh celah transparan dua arah — isi cols×rows atau ukuran frame",
+          );
+        }
+
+        /* layout: auto */
+        const want = P.frames;
+        if (colRuns.length === 1 && rowRuns.length === 1) {
+          if (want > 1) {
+            const p = evenStrip("x", want) || evenStrip("y", want);
+            if (!p)
+              throw new Error(
+                `gambar terbaca sebagai sprite tunggal; ${want} frame diminta tapi ${W}×${H} tidak habis dibagi — isi ukuran frame`,
+              );
+            notes.push(
+              "frame saling menempel (tanpa celah) → pembagian rata; perhatikan cek split.bleed",
+            );
+            return p;
+          }
+          return done("frame tunggal", [{ x: 0, y: 0, w: W, h: H }], []);
+        }
+        if (want > 0) {
+          if (colRuns.length === want && rowRuns.length === 1)
+            return stripFromRuns("x");
+          if (rowRuns.length === want && colRuns.length === 1)
+            return stripFromRuns("y");
+          if (colRuns.length * rowRuns.length === want) return gridFromRuns();
+          const p = evenStrip("x", want) || evenStrip("y", want);
+          if (p) {
+            notes.push(
+              "frame saling menempel (tanpa celah) → pembagian rata; perhatikan cek split.bleed",
+            );
+            return p;
+          }
+          throw new Error(
+            `layout ${want} frame tidak ditemukan di ${W}×${H} — atur layout / ukuran frame / cols×rows`,
+          );
+        }
+        if (colRuns.length > 1 && rowRuns.length > 1) {
+          notes.push(
+            "grid terdeteksi dari celah transparan — override dengan jumlah frame bila salah",
+          );
+          return gridFromRuns();
+        }
+        return colRuns.length > 1 ? stripFromRuns("x") : stripFromRuns("y");
+      }
+
+      /* ------------------------------ pipeline ------------------------------ */
+      function imgdToCanvas(imgd) {
+        const c = document.createElement("canvas");
+        c.width = imgd.w;
+        c.height = imgd.h;
+        c.getContext("2d").putImageData(
+          new ImageData(imgd.d, imgd.w, imgd.h),
+          0,
+          0,
+        );
+        return c;
+      }
+
+      function runPipeline() {
+        if (!S.src) return null;
+        const P = S.params;
+        const img = { w: S.src.width, h: S.src.height, d: S.src.data };
+        const checks = [];
+        const add = (id, status, msg) => checks.push({ id, status, msg });
+
+        let semi = 0;
+        for (let i = 3; i < img.d.length; i += 4) {
+          const a = img.d[i];
+          if (a > 0 && a < 255) semi++;
+        }
+        const semiPct = (semi / (img.w * img.h)) * 100;
+
+        let plan;
+        try {
+          plan = planCells(img, {
+            layout: P.layout,
+            frames: P.frames,
+            frameSize:
+              P.frameW > 0 && P.frameH > 0 ? [P.frameW, P.frameH] : null,
+            cols: P.cols,
+            rows: P.rows,
+            gap: P.gap,
+            th: P.alphaTh,
+          });
+        } catch (e) {
+          return {
+            error: e.message,
+            checks: [{ id: "split", status: "fail", msg: e.message }],
+            notes: [],
+            badCuts: [],
+          };
+        }
+        if (!plan.cells.length)
+          return {
+            error:
+              "tidak ada konten di atas ambang alfa — turunkan ambang atau periksa file",
+            checks: [
+              {
+                id: "split",
+                status: "fail",
+                msg: "tidak ada konten di atas ambang alfa",
+              },
+            ],
+            notes: plan.notes,
+            badCuts: [],
+          };
+
+        /* §18.1: potongan bocor? */
+        let badCuts = [];
+        if (plan.cuts && plan.cuts.length) {
+          badCuts = checkCuts(img, plan.cuts, P.gap, P.alphaTh);
+          add(
+            "split.bleed",
+            badCuts.length ? "warn" : "ok",
+            badCuts.length
+              ? `potongan ${badCuts.map((c) => c.axis + "=" + c.pos).join(", ")} memotong konten — frame tetangga berpotensi bocor; cek gap/ukuran frame (§18.1)`
+              : "tidak ada konten yang melintasi batas potongan",
+          );
+        } else if (plan.cells.length > 1) {
+          add(
+            "split.bleed",
+            "ok",
+            "frame terpisah oleh celah transparan — potongan bersih",
+          );
+        }
+
+        /* §19: tidak boleh ada frame kosong */
+        const raws = plan.cells.map((c) => cropFrame(img, c));
+        const boxes = raws.map((f) => bboxOf(f, P.alphaTh));
+        const emptyIdx = [];
+        boxes.forEach((b, i) => {
+          if (!b) emptyIdx.push(i);
+        });
+        if (emptyIdx.length) {
+          add(
+            "split.empty",
+            "fail",
+            `frame ${emptyIdx.map((i) => "#" + String(i).padStart(2, "0")).join(", ")} tanpa konten (alfa ≤ ${P.alphaTh}) — perbaiki jumlah/ukuran frame`,
+          );
+          return {
+            error: `${emptyIdx.length} frame kosong terdeteksi — sesuaikan parameter pembagian`,
+            checks,
+            plan,
+            notes: plan.notes,
+            badCuts: [],
+          };
+        }
+        add(
+          "split.empty",
+          "ok",
+          `${plan.cells.length} sel, semuanya berisi konten`,
+        );
+
+        /* trim per frame + statistik input (drift baseline / variasi tinggi) */
+        let contents = raws.map((f, i) => cropFrame(f, boxes[i]));
+        const inBottoms = boxes.map((b) => b.y + b.h);
+        const driftY = Math.max(...inBottoms) - Math.min(...inBottoms);
+        const hVar =
+          Math.max(...boxes.map((b) => b.h)) -
+          Math.min(...boxes.map((b) => b.h));
+
+        /* §18.2.3: scale seragam semua frame */
+        const scaleNotes = [];
+        if (P.scale !== 1) {
+          contents = contents.map((f) => scaleFrame(f, P.scale, P.resample));
+          scaleNotes.push(`skala ×${P.scale} (${P.resample})`);
+        }
+        let maxW = 0,
+          maxH = 0;
+        for (const f of contents) {
+          if (f.w > maxW) maxW = f.w;
+          if (f.h > maxH) maxH = f.h;
+        }
+
+        /* §18.4: geometri kanvas — auto → preset → manual */
+        const mode = P.anchor,
+          sink = P.sink;
+        let cw, ch;
+        if (P.canvasW > 0 && P.canvasH > 0) {
+          cw = P.canvasW;
+          ch = P.canvasH;
+        } else {
+          cw = maxW + 2 * P.pad;
+          ch = mode === "center" ? maxH + 2 * P.pad : maxH + sink + P.pad;
+        }
+        const ax =
+          mode === "center"
+            ? Math.floor(cw / 2)
+            : P.anchorX > 0
+              ? P.anchorX
+              : Math.floor(cw / 2);
+        const ay =
+          mode === "center"
+            ? Math.floor(ch / 2)
+            : P.anchorY > 0
+              ? P.anchorY
+              : ch - sink;
+
+        /* auto-fit: downscale SERAGAM bila konten melebihi kanvas — tidak pernah sebagian frame (§18.2.3) */
+        const vBudget = mode === "center" ? ch : ay;
+        const fit = Math.min(1, cw / maxW, vBudget / maxH);
+        if (fit < 1) {
+          contents = contents.map((f) => scaleFrame(f, fit, P.resample));
+          maxW = 0;
+          maxH = 0;
+          for (const f of contents) {
+            if (f.w > maxW) maxW = f.w;
+            if (f.h > maxH) maxH = f.h;
+          }
+          scaleNotes.push(
+            `auto-fit ×${fit.toFixed(3)} → konten ${maxW}×${maxH} agar muat kanvas ${cw}×${ch}`,
+          );
+        }
+        add(
+          "split.uniform",
+          "ok",
+          `${contents.length} frame dinormalisasi ke kanvas ${cw}×${ch} — potongan integer, W/H identik (§18.2.1–3)`,
+        );
+
+        let frames;
+        try {
+          frames = contents.map((f) => placeOnCanvas(f, cw, ch, ax, ay, mode));
+        } catch (e) {
+          add("anchor.fit", "fail", e.message);
+          return {
+            error: e.message,
+            checks,
+            plan,
+            notes: [...plan.notes, ...scaleNotes],
+            badCuts,
+          };
+        }
+
+        add(
+          "anchor.baseline",
+          driftY > 2 ? "warn" : "ok",
+          driftY > 2
+            ? `baseline input bergeser ${driftY}px antar frame — telah dinormalisasi ke anchor y=${ay}; pastikan kaki memang konten terbawah, verifikasi tab Onion (§18.2.4)`
+            : `baseline input stabil (±${driftY}px) — kaki tidak loncat`,
+        );
+        add(
+          "anchor.height",
+          hVar > 2 ? "warn" : "ok",
+          hVar > 2
+            ? `tinggi konten bervariasi ${hVar}px antar frame — sejajar bawah; idealnya hanya bagian gerak (api/ombak/blade) yang berubah (§18.2.2)`
+            : `tinggi konten seragam (±${hVar}px)`,
+        );
+
+        /* §18.2.5: cek loop N→0 + lokalisasi gerak */
+        if (frames.length > 1) {
+          const adj = [];
+          for (let i = 0; i + 1 < frames.length; i++)
+            adj.push(diffStats(frames[i], frames[i + 1]));
+          const wrapD = diffStats(frames[frames.length - 1], frames[0]);
+          const adjMean = adj.reduce((s, d) => s + d.mad, 0) / adj.length;
+          if (P.pingpong)
+            add(
+              "loop.wrap",
+              "ok",
+              "pingpong — frame terakhir tidak pernah bersebelahan dengan frame 0",
+            );
+          else if (P.loop) {
+            const jump =
+              wrapD.mad > 0.02 &&
+              wrapD.mad > Math.max(adjMean * 2, adjMean + 0.03);
+            add(
+              "loop.wrap",
+              jump ? "warn" : "ok",
+              jump
+                ? `lonjakan loop: MAD akhir→awal ${wrapD.mad.toFixed(3)} vs antar-frame ${adjMean.toFixed(3)} — regenerasi frame akhir pada fase yang cocok (§18.2.5)`
+                : `loop mulus: MAD akhir→awal ${wrapD.mad.toFixed(3)} vs antar-frame ${adjMean.toFixed(3)}`,
+            );
+          } else add("loop.wrap", "ok", "one-shot (loop mati)");
+          const worst = Math.max(
+            ...adj.map((d) => d.changedPct),
+            wrapD.changedPct,
+          );
+          add(
+            "loop.localized",
+            worst > 60 ? "warn" : "ok",
+            worst > 60
+              ? `${worst.toFixed(0)}% piksel berubah per langkah — perubahan seluruh frame mengindikasikan slide/geser lighting (§18.2.4)`
+              : `gerak terlokalisasi (maks ${worst.toFixed(0)}% piksel berubah per langkah)`,
+          );
+        }
+        const fpsOk = P.fps >= 4 && P.fps <= 15;
+        add(
+          "anim.fps",
+          fpsOk ? "ok" : "warn",
+          `${P.fps} fps${P.pingpong ? ", pingpong" : ""}${P.loop ? ", loop" : ", one-shot"}${fpsOk ? "" : " — di luar rentang umum ambient 6–12 / karakter 4–8 (§8)"}`,
+        );
+        add(
+          "alpha.edge",
+          "ok",
+          `${semiPct.toFixed(1)}% piksel semi-transparan — periksa tab Edge 400% pada latar terang+gelap (§19)`,
+        );
+
+        /* artefak visual */
+        const frameObjs = frames.map((f) => ({
+          imgd: f,
+          canvas: imgdToCanvas(f),
+          bbox: bboxOf(f, P.alphaTh),
+        }));
+        const sheetC = document.createElement("canvas");
+        sheetC.width = cw * frames.length;
+        sheetC.height = ch;
+        const sctx = sheetC.getContext("2d");
+        frameObjs.forEach((f, i) => sctx.drawImage(f.canvas, i * cw, 0));
+
+        const onionC = document.createElement("canvas");
+        onionC.width = cw;
+        onionC.height = ch;
+        const octx = onionC.getContext("2d");
+        frameObjs.forEach((f, i) => {
+          octx.globalAlpha = i === 0 ? 1 : 0.5;
+          octx.drawImage(f.canvas, 0, 0);
+        });
+        octx.globalAlpha = 1;
+
+        const onionBaked = buildOnionBaked(frameObjs, { cw, ch, ax, ay });
+        const edgeC = buildEdge(frameObjs[0]);
+        const srcC = imgdToCanvas({ w: img.w, h: img.h, d: img.d });
+
+        const json = {
+          name: P.name || "anim",
+          frame_w: cw,
+          frame_h: ch,
+          count: frameObjs.length,
+          anchorX: ax,
+          anchorY: ay,
+          fps: P.fps,
+          loop: P.loop,
+          pingpong: P.pingpong,
+          frames: frameObjs.map((f, i) => ({ x: i * cw, y: 0, w: cw, h: ch })),
+          meta: {
+            source: S.fileName,
+            layout: plan.layout,
+            anchor_mode: mode,
+            sink: mode === "center" ? 0 : ch - ay,
+            scale: P.scale,
+            resample: P.resample,
+            alpha_threshold: P.alphaTh,
+            generator: "frameforge-web (isometric-game-skills §18)",
+          },
+        };
+
+        return {
+          plan,
+          checks,
+          notes: [...plan.notes, ...scaleNotes],
+          badCuts,
+          geom: { cw, ch, ax, ay, mode, sink: mode === "center" ? 0 : ch - ay },
+          frames: frameObjs,
+          sheetC,
+          onionC,
+          onionBaked,
+          edgeC,
+          srcC,
+          json,
+          semiPct,
+        };
+      }
+
+      /* onion versi file: papan catur + stack 50% + garis anchor (§18.2.4) */
+      function buildOnionBaked(frames, g) {
+        const c = document.createElement("canvas");
+        c.width = g.cw;
+        c.height = g.ch;
+        const x = c.getContext("2d");
+        for (let yy = 0; yy < g.ch; yy += 8)
+          for (let xx = 0; xx < g.cw; xx += 8) {
+            x.fillStyle = ((xx >> 3) + (yy >> 3)) & 1 ? "#d4d4d9" : "#ebebef";
+            x.fillRect(xx, yy, 8, 8);
+          }
+        frames.forEach((f, i) => {
+          x.globalAlpha = i === 0 ? 1 : 0.5;
+          x.drawImage(f.canvas, 0, 0);
+        });
+        x.globalAlpha = 1;
+        x.strokeStyle = "#e649b8";
+        x.lineWidth = 1;
+        x.beginPath();
+        x.moveTo(0, g.ay + 0.5);
+        x.lineTo(g.cw, g.ay + 0.5);
+        x.moveTo(g.ax + 0.5, 0);
+        x.lineTo(g.ax + 0.5, g.ch);
+        x.stroke();
+        return c;
+      }
+      /* edge @400% di latar terang + gelap (§19) */
+      function buildEdge(f) {
+        const z = 4;
+        const big = document.createElement("canvas");
+        big.width = f.canvas.width * z;
+        big.height = f.canvas.height * z;
+        const bx = big.getContext("2d");
+        bx.imageSmoothingEnabled = false;
+        bx.drawImage(f.canvas, 0, 0, big.width, big.height);
+        const c = document.createElement("canvas");
+        c.width = big.width * 2 + 2;
+        c.height = big.height;
+        const x = c.getContext("2d");
+        x.fillStyle = "#ffffff";
+        x.fillRect(0, 0, big.width, big.height);
+        x.fillStyle = "#000000";
+        x.fillRect(big.width + 2, 0, big.width, big.height);
+        x.fillStyle = "#888888";
+        x.fillRect(big.width, 0, 2, big.height);
+        x.drawImage(big, 0, 0);
+        x.drawImage(big, big.width + 2, 0);
+        return c;
+      }
+
+      /* ------------------------------ demo generator ------------------------ */
+      /* brazier iso 6-frame: loop bersih (baseline stabil) vs drift (kaki loncat + seam) */
+      function drawBrazier(g, cx, baseY, p, drift) {
+        const a = 23,
+          b = 11.5,
+          th = 13,
+          cy = baseY - th;
+        const poly = (pts, fill) => {
+          g.fillStyle = fill;
+          g.beginPath();
+          g.moveTo(pts[0][0], pts[0][1]);
+          for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+          g.closePath();
+          g.fill();
+        };
+        poly(
+          [
+            [cx, cy - b],
+            [cx + a, cy],
+            [cx, cy + b],
+            [cx - a, cy],
+          ],
+          "#7e848e",
+        );
+        poly(
+          [
+            [cx - a, cy],
+            [cx, cy + b],
+            [cx, cy + b + th],
+            [cx - a, cy + th],
+          ],
+          "#4b5059",
+        );
+        poly(
+          [
+            [cx + a, cy],
+            [cx, cy + b],
+            [cx, cy + b + th],
+            [cx + a, cy + th],
+          ],
+          "#3a3e46",
+        );
+        poly(
+          [
+            [cx, cy - b * 0.55],
+            [cx + a * 0.55, cy],
+            [cx, cy + b * 0.55],
+            [cx - a * 0.55, cy],
+          ],
+          "#9096a1",
+        );
+        poly(
+          [
+            [cx - 10, cy + 1],
+            [cx + 10, cy + 1],
+            [cx + 7, cy - 3],
+            [cx - 7, cy - 3],
+          ],
+          "#c96a2e",
+        );
+        const fb = cy - 1;
+        const sway = Math.sin(p) * (drift ? 7 : 3);
+        const H = 42 + Math.sin(p * 2 + 1) * (drift ? 3 : 0.8);
+        const layers = [
+          [16, "#ff6b2d", 0.82, 1],
+          [11, "#ffb454", 0.9, 0.72],
+          [6, "#ffe9b0", 0.95, 0.45],
+        ];
+        for (const [w, c, al, hf] of layers) {
+          const lh = H * hf,
+            tipX = cx + sway * hf * 1.15,
+            hw = w / 2;
+          g.globalAlpha = al;
+          g.fillStyle = c;
+          g.beginPath();
+          g.moveTo(cx - hw, fb);
+          g.bezierCurveTo(
+            cx - hw - 2,
+            fb - lh * 0.38,
+            tipX - 3,
+            fb - lh * 0.72,
+            tipX,
+            fb - lh,
+          );
+          g.bezierCurveTo(
+            tipX + 3,
+            fb - lh * 0.72,
+            cx + hw + 2,
+            fb - lh * 0.38,
+            cx + hw,
+            fb,
+          );
+          g.closePath();
+          g.fill();
+        }
+        g.globalAlpha = 1;
+      }
+      function loadDemo(kind) {
+        const drift = kind === "drift";
+        const N = 6,
+          CW = 96,
+          CH = 112,
+          GAP = 12,
+          W = N * CW + (N - 1) * GAP;
+        const cv = document.createElement("canvas");
+        cv.width = W;
+        cv.height = CH;
+        const g = cv.getContext("2d", { willReadFrequently: true });
+        for (let i = 0; i < N; i++) {
+          const cx = i * (CW + GAP) + CW / 2;
+          let p = (i / N) * Math.PI * 2;
+          if (drift && i === N - 1) p += 2.3; // seam loop yang disengaja
+          const dy = drift ? [0, 3, 5, 3, 0, -4][i] : 0; // drift baseline yang disengaja
+          drawBrazier(g, cx, CH - 8 + dy, p, drift);
+        }
+        setSource(
+          g.getImageData(0, 0, W, CH),
+          drift ? "demo_drift_strip.png" : "demo_brazier_strip.png",
+        );
+        toast(
+          drift
+            ? "Demo dimuat — sengaja penuh peringatan (drift kaki + seam loop)"
+            : "Demo dimuat — loop bersih, semua cek lolos",
+        );
+      }
+
+      /* ------------------------------ referensi DOM ------------------------- */
+      const vp = $("vp"),
+        vctx = vp ? vp.getContext("2d") : null,
+        vpWrap = $("vpWrap");
+      const dropHero = $("dropHero"),
+        errOverlay = $("errOverlay"),
+        errMsg = $("errMsg");
+      const hudInfo = $("hudInfo"),
+        zIn = $("zIn"),
+        zOut = $("zOut"),
+        zFit = $("zFit"),
+        zVal = $("zVal");
+      const thumbs = $("thumbs"),
+        statusPill = $("statusPill");
+      const ckOk = $("ckOk"),
+        ckWarn = $("ckWarn"),
+        ckFail = $("ckFail"),
+        ckList = $("checksPanel"),
+        checksWrap = $("checksWrap");
+      const detInfo = $("detInfo"),
+        notesList = $("notesList"),
+        geoInfo = $("geoInfo"),
+        srcInfo = $("srcInfo"),
+        jsonPre = $("jsonPre");
+      const scrub = $("scrub"),
+        frameCtr = $("frameCtr"),
+        playbar = $("playbar");
+      const btnPlay = $("btnPlay"),
+        btnLoop = $("btnLoop"),
+        btnPong = $("btnPong");
+      const rowGrid = $("rowGrid"),
+        fsNote = $("fsNote"),
+        fileInput = $("fileInput"),
+        toasts = $("toasts");
+      const btnZip = $("btnZip");
+
+      /* ------------------------------ toast --------------------------------- */
+      function toast(msg, type = "info") {
+        if (!toasts || !toasts.append) return;
+        const d = document.createElement("div");
+        d.className = "toast " + type;
+        d.textContent = msg;
+        toasts.append(d);
+        setTimeout(() => {
+          d.classList.add("out");
+          setTimeout(() => d.remove(), 320);
+        }, 3800);
+      }
+
+      /* ------------------------------ muat file ----------------------------- */
+      async function loadFile(file) {
+        if (!(/image\/png/i.test(file.type) || /\.png$/i.test(file.name))) {
+          toast("Input harus PNG transparan multi-frame", "fail");
+          return;
+        }
+        try {
+          const bmp = await createImageBitmap(file);
+          const w = bmp.width,
+            h = bmp.height;
+          const c = document.createElement("canvas");
+          c.width = w;
+          c.height = h;
+          const x = c.getContext("2d", { willReadFrequently: true });
+          x.drawImage(bmp, 0, 0);
+          if (bmp.close) bmp.close();
+          setSource(x.getImageData(0, 0, w, h), file.name);
+          toast(`Dimuat: ${file.name} (${w}×${h})`, "ok");
+        } catch (e) {
+          toast("Gagal membaca PNG: " + e.message, "fail");
+        }
+      }
+      function setSource(imgd, fname) {
+        S.src = imgd;
+        S.fileName = fname;
+        /* reset parameter split agar deteksi segar (§18.1) */
+        Object.assign(S.params, {
+          layout: "auto",
+          frames: 0,
+          frameW: 0,
+          frameH: 0,
+          cols: 0,
+          rows: 0,
+          gap: 0,
+          alphaTh: 12,
+        });
+        S.params.name = fname
+          .replace(/\.[^.]+$/, "")
+          .replace(/[^A-Za-z0-9_-]+/g, "_");
+        syncParamUI();
+        S.frame = 0;
+        S.dir = 1;
+        S.playing = true;
+        setView("anim");
+        run();
+        fitView();
+      }
+
+      /* ------------------------------ run + render -------------------------- */
+      let runTimer = 0;
+      function scheduleRun() {
+        clearTimeout(runTimer);
+        runTimer = setTimeout(run, 140);
+      }
+      function run() {
+        S.result = runPipeline();
+        const R = S.result;
+        if (R && !R.error) S.frame = clamp(S.frame, 0, R.frames.length - 1);
+        else S.frame = 0;
+        renderChecks();
+        renderFilmstrip();
+        renderJson();
+        renderMeta();
+        updateHeroVis();
+        lastSync = "";
+      }
+
+      function updateHeroVis() {
+        if (!dropHero || !errOverlay || !errMsg || !srcInfo || !playbar) return;
+        dropHero.style.display = S.src ? "none" : "grid";
+        const err = S.result && S.result.error ? S.result.error : null;
+        errOverlay.classList.toggle("hidden", !err);
+        if (err) errMsg.textContent = err;
+        srcInfo.textContent = S.src
+          ? `${S.fileName} · ${S.src.width}×${S.src.height}px`
+          : "belum ada file — pilih atau seret PNG";
+        playbar.classList.toggle("dead", !ready());
+        [
+          $("btnSheet"),
+          $("btnJson"),
+          $("btnGif"),
+          $("btnOnion"),
+          $("btnEdge"),
+          $("btnCopy"),
+          btnZip,
+        ].forEach((b) => {
+          if (b) b.disabled = !ready();
+        });
+      }
+
+      function renderChecks() {
+        if (!ckOk || !ckWarn || !ckFail || !ckList) return;
+        const R = S.result,
+          list = R ? R.checks : [];
+        let ok = 0,
+          warn = 0,
+          fail = 0;
+        for (const c of list) {
+          if (c.status === "ok") ok++;
+          else if (c.status === "warn") warn++;
+          else fail++;
+        }
+        ckOk.textContent = ok;
+        ckWarn.textContent = warn;
+        ckFail.textContent = fail;
+        ckList.innerHTML = list.length
+          ? list
+              .map(
+                (c) =>
+                  `<div class="ck ${c.status}"><span class="cki">${icon(c.status, 15)}</span><span class="ckid">${esc(c.id)}</span><span class="ckm">${esc(c.msg)}</span></div>`,
+              )
+              .join("")
+          : '<div class="ck none">muat PNG multi-frame untuk menjalankan checklist §19 — split · anchor · loop · transparansi</div>';
+        let label, cls;
+        if (!R) {
+          label = "SIAP";
+          cls = "idle";
+        } else if (fail) {
+          label = "GAGAL";
+          cls = "fail";
+        } else if (warn) {
+          label = `${warn} PERINGATAN`;
+          cls = "warn";
+        } else {
+          label = "LOLOS";
+          cls = "ok";
+        }
+        if (statusPill) {
+          statusPill.className = "pill " + cls;
+          statusPill.textContent = label;
+        }
+        if (checksWrap) checksWrap.classList.toggle("open", S.ckOpen || fail > 0);
+      }
+
+      function renderFilmstrip() {
+        if (!thumbs) return;
+        thumbs.innerHTML = "";
+        const R = S.result;
+        if (!R || !error0(R)) return;
+        R.frames.forEach((f, i) => {
+          const d = document.createElement("div");
+          d.className = "thumb";
+          d.dataset.i = i;
+          const box = document.createElement("div");
+          box.className = "tcanvas";
+          const c = f.canvas;
+          const s = Math.min(84 / c.width, 66 / c.height);
+          c.style.width = c.width * s + "px";
+          c.style.height = c.height * s + "px";
+          box.append(c);
+          const dl = document.createElement("button");
+          dl.className = "tdl";
+          dl.title = "unduh frame " + String(i).padStart(2, "0");
+          dl.innerHTML = icon("download", 12);
+          dl.onclick = async (e) => {
+            e.stopPropagation();
+            saveBlob(
+              new Blob([await canvasBytes(f.canvas)], { type: "image/png" }),
+              "frame_" + String(i).padStart(2, "0") + ".png",
+            );
+          };
+          box.append(dl);
+          const cap = document.createElement("div");
+          cap.className = "tcap";
+          const b = f.bbox;
+          cap.innerHTML = `<b>#${String(i).padStart(2, "0")}</b><span>${b ? b.w + "×" + b.h : "—"}</span><span>${b ? "y" + b.y + "–" + (b.y + b.h) : ""}</span>`;
+          d.append(box, cap);
+          d.onclick = () => {
+            S.frame = i;
+            lastSync = "";
+          };
+          thumbs.append(d);
+        });
+        function error0(r) {
+          return !r.error;
+        }
+      }
+
+      function renderJson() {
+        const target = $("jsonPre") || jsonPre;
+        if (!target) return;
+        const R = S.result;
+        target.innerHTML =
+          R && !R.error
+            ? hlJson(JSON.stringify(R.json, null, 2))
+            : "// muat PNG untuk menghasilkan anim.json";
+      }
+      function hlJson(s) {
+        return esc(s).replace(
+          /&quot;(.*?)&quot;(\s*:)?|\b(true|false|null)\b|(-?\d+\.?\d*)/g,
+          (m, q, colon, kw, num) => {
+            if (q !== undefined)
+              return colon
+                ? `<span class="jk">&quot;${q}&quot;</span>${colon}`
+                : `<span class="js">&quot;${q}&quot;</span>`;
+            if (kw) return `<span class="jb">${kw}</span>`;
+            return `<span class="jn">${num}</span>`;
+          },
+        );
+      }
+      function renderMeta() {
+        if (!detInfo || !notesList || !geoInfo) return;
+        const R = S.result;
+        if (R && R.plan && !R.error) {
+          detInfo.textContent = `${R.plan.cells.length} frame · ${R.plan.layout}`;
+          notesList.innerHTML = (R.notes || [])
+            .map((n) => `<li>${esc(n)}</li>`)
+            .join("");
+          const g = R.geom;
+          geoInfo.textContent = `kanvas ${g.cw}×${g.ch} · anchor (${g.ax},${g.ay})${g.mode === "bottom-center" ? " · sink " + g.sink : ""}`;
+        } else if (R && R.plan) {
+          detInfo.textContent = R.plan.cells.length + " sel · gagal";
+          notesList.innerHTML = (R.notes || [])
+            .map((n) => `<li>${esc(n)}</li>`)
+            .join("");
+          geoInfo.textContent = "—";
+        } else {
+          detInfo.textContent = "—";
+          notesList.innerHTML = "";
+          geoInfo.textContent = "—";
+        }
+      }
+
+      /* ------------------------------ viewport ------------------------------ */
+      let checkerPat = null;
+      function makeChecker() {
+        if (!vctx) return null;
+        const dpr = S.dpr,
+          size = 12;
+        const t = document.createElement("canvas");
+        t.width = t.height = size * 2 * dpr;
+        const c = t.getContext("2d");
+        c.fillStyle = "#101015";
+        c.fillRect(0, 0, t.width, t.height);
+        c.fillStyle = "#17171d";
+        c.fillRect(0, 0, size * dpr, size * dpr);
+        c.fillRect(size * dpr, size * dpr, size * dpr, size * dpr);
+        return vctx.createPattern(t, "repeat");
+      }
+      if (vpWrap && vp) {
+        try {
+          new ResizeObserver(() => {
+            if (!vpWrap || !vp) return;
+            const r = vpWrap.getBoundingClientRect();
+            S.dpr = window.devicePixelRatio || 1;
+            vp.width = Math.max(1, Math.round(r.width * S.dpr));
+            vp.height = Math.max(1, Math.round(r.height * S.dpr));
+            checkerPat = makeChecker();
+          }).observe(vpWrap);
+        } catch (_) {}
+      }
+
+      function viewContent() {
+        const R = S.result;
+        if (!R || R.error) return null;
+        switch (S.view) {
+          case "anim": {
+            const f = R.frames[clamp(S.frame, 0, R.frames.length - 1)];
+            return f ? { c: f.canvas, w: R.geom.cw, h: R.geom.ch } : null;
+          }
+          case "onion":
+            return { c: R.onionC, w: R.geom.cw, h: R.geom.ch };
+          case "edge":
+            return { c: R.edgeC, w: R.edgeC.width, h: R.edgeC.height };
+          case "sheet":
+            return { c: R.sheetC, w: R.sheetC.width, h: R.sheetC.height };
+          default:
+            return { c: R.srcC, w: R.srcC.width, h: R.srcC.height };
+        }
+      }
+      function fitView() {
+        if (!vpWrap) return;
+        const C = viewContent();
+        if (!C) return;
+        const r = vpWrap.getBoundingClientRect();
+        S.zoom = clamp(
+          Math.min((r.width - 90) / C.w, (r.height - 90) / C.h),
+          0.02,
+          16,
+        );
+        S.panX = 0;
+        S.panY = 0;
+        updateZoomUI();
+      }
+      function zoomBy(f, cx, cy) {
+        if (!vpWrap) return;
+        const r = vpWrap.getBoundingClientRect();
+        if (cx == null) {
+          cx = r.width / 2;
+          cy = r.height / 2;
+        }
+        const z1 = S.zoom,
+          z2 = clamp(z1 * f, 0.02, 32);
+        const mx = cx - r.width / 2,
+          my = cy - r.height / 2;
+        S.panX = mx - (mx - S.panX) * (z2 / z1);
+        S.panY = my - (my - S.panY) * (z2 / z1);
+        S.zoom = z2;
+        updateZoomUI();
+      }
+      function updateZoomUI() {
+        if (!zVal) return;
+        zVal.textContent = Math.round(S.zoom * 100) + "%";
+      }
+
+      function renderViewport(t) {
+        if (!vp || !vctx) return;
+        const w = vp.width,
+          h = vp.height,
+          dpr = S.dpr;
+        if (!w || !h) return;
+        vctx.setTransform(1, 0, 0, 1, 0, 0);
+        vctx.fillStyle = "#0a0a0d";
+        vctx.fillRect(0, 0, w, h);
+        if (checkerPat) {
+          vctx.fillStyle = checkerPat;
+          vctx.fillRect(0, 0, w, h);
+        }
+        const R = S.result;
+        if (!R || R.error) return;
+        const C = viewContent();
+        if (!C) return;
+        const z = S.zoom;
+        const dw = C.w * z * dpr,
+          dh = C.h * z * dpr;
+        const x = Math.round((w - dw) / 2 + S.panX * dpr),
+          y = Math.round((h - dh) / 2 + S.panY * dpr);
+        vctx.imageSmoothingEnabled = z < 1; // upscale tajam (pixel-art), downscale halus
+        vctx.imageSmoothingQuality = "high";
+        vctx.drawImage(C.c, x, y, dw, dh);
+        drawOverlay(C, x, y, dw, dh, z, dpr, t);
+      }
+      function drawOverlay(C, x, y, dw, dh, z, dpr, t) {
+        const R = S.result,
+          g = R.geom;
+        vctx.strokeStyle = "rgba(255,255,255,.14)";
+        vctx.lineWidth = 1;
+        vctx.strokeRect(x - 0.5, y - 0.5, dw + 1, dh + 1);
+        vctx.font = `${9 * dpr}px "JetBrains Mono",monospace`;
+        if (S.view === "anim" || S.view === "onion") {
+          /* garis panduan anchor: baseline tidak boleh geser (§18.2.2) */
+          const gx = x + g.ax * z * dpr,
+            gy = y + g.ay * z * dpr,
+            e = 10 * dpr;
+          vctx.strokeStyle = "rgba(255,180,84,.85)";
+          vctx.lineWidth = dpr;
+          vctx.setLineDash([5 * dpr, 4 * dpr]);
+          vctx.beginPath();
+          vctx.moveTo(gx, y - e);
+          vctx.lineTo(gx, y + dh + e);
+          vctx.moveTo(x - e, gy);
+          vctx.lineTo(x + dw + e, gy);
+          vctx.stroke();
+          vctx.setLineDash([]);
+          vctx.fillStyle = "#ffb454";
+          vctx.beginPath();
+          vctx.arc(gx, gy, 2.5 * dpr, 0, 7);
+          vctx.fill();
+        } else if (S.view === "sheet") {
+          const n = R.frames.length,
+            fw = g.cw * z * dpr;
+          vctx.strokeStyle = "rgba(255,255,255,.12)";
+          vctx.lineWidth = 1;
+          for (let i = 1; i < n; i++) {
+            const lx = Math.round(x + i * fw) + 0.5;
+            vctx.beginPath();
+            vctx.moveTo(lx, y);
+            vctx.lineTo(lx, y + dh);
+            vctx.stroke();
+          }
+          if (fw > 34 * dpr) {
+            vctx.fillStyle = "rgba(255,180,84,.9)";
+            for (let i = 0; i < n; i++)
+              vctx.fillText(
+                "#" + String(i).padStart(2, "0"),
+                x + i * fw + 4 * dpr,
+                y + 11 * dpr,
+              );
+          }
+        } else if (S.view === "source") {
+          /* marching ants pada sel terdeteksi + garis merah potongan bocor */
+          const P = R.plan;
+          vctx.strokeStyle = "rgba(255,180,84,.95)";
+          vctx.lineWidth = dpr;
+          vctx.setLineDash([5 * dpr, 4 * dpr]);
+          vctx.lineDashOffset = -(t / 40) * dpr;
+          for (const c of P.cells)
+            vctx.strokeRect(
+              x + c.x * z * dpr,
+              y + c.y * z * dpr,
+              c.w * z * dpr,
+              c.h * z * dpr,
+            );
+          vctx.setLineDash([]);
+          vctx.lineDashOffset = 0;
+          vctx.fillStyle = "rgba(255,180,84,.9)";
+          P.cells.forEach((c, i) => {
+            if (c.w * z * dpr > 26 * dpr)
+              vctx.fillText(
+                "#" + String(i).padStart(2, "0"),
+                x + c.x * z * dpr + 3 * dpr,
+                y + c.y * z * dpr + 11 * dpr,
+              );
+          });
+          vctx.strokeStyle = "rgba(247,118,142,.95)";
+          vctx.lineWidth = Math.max(2, 1.5 * dpr);
+          for (const b of R.badCuts) {
+            vctx.beginPath();
+            if (b.axis === "x") {
+              const p = x + b.pos * z * dpr;
+              vctx.moveTo(p, y - 6 * dpr);
+              vctx.lineTo(p, y + dh + 6 * dpr);
+            } else {
+              const p = y + b.pos * z * dpr;
+              vctx.moveTo(x - 6 * dpr, p);
+              vctx.lineTo(x + dw + 6 * dpr, p);
+            }
+            vctx.stroke();
+          }
+        }
+      }
+
+      /* ------------------------------ playback ------------------------------ */
+      function advance() {
+        const n = S.result.frames.length,
+          P = S.params;
+        if (n < 2) return;
+        if (P.pingpong) {
+          let f = S.frame + S.dir;
+          if (f >= n) {
+            if (P.loop) {
+              S.dir = -1;
+              f = n - 2;
+            } else {
+              f = n - 1;
+              S.playing = false;
+            }
+          } else if (f < 0) {
+            if (P.loop) {
+              S.dir = 1;
+              f = 1;
+            } else {
+              f = 0;
+              S.playing = false;
+            }
+          }
+          S.frame = f;
+        } else {
+          let f = S.frame + 1;
+          if (f >= n) {
+            if (P.loop) f = 0;
+            else {
+              f = n - 1;
+              S.playing = false;
+            }
+          }
+          S.frame = f;
+        }
+        lastSync = "";
+      }
+      function togglePlay() {
+        if (!ready()) return;
+        if (S.result.frames.length < 2) {
+          toast("Hanya 1 frame — tidak ada yang diputar", "warn");
+          return;
+        }
+        S.playing = !S.playing;
+        lastSync = "";
+      }
+      function step(d) {
+        if (!ready()) return;
+        S.playing = false;
+        const n = S.result.frames.length;
+        S.frame = (S.frame + d + n) % n;
+        lastSync = "";
+      }
+
+      let lastT = 0,
+        acc = 0,
+        lastSync = "";
+      function tick(t) {
+        requestAnimationFrame(tick);
+        const dt = Math.min(0.1, (t - lastT) / 1000) || 0;
+        lastT = t;
+        const R = S.result;
+        if (R && !R.error && S.playing && R.frames.length > 1) {
+          acc += dt;
+          const spf = 1 / Math.max(0.5, S.params.fps);
+          let guard = 0;
+          while (acc >= spf && guard++ < 120) {
+            acc -= spf;
+            advance();
+          }
+        } else acc = 0;
+        renderViewport(t);
+        syncPlayUI();
+      }
+      function syncPlayUI() {
+        const R = S.result,
+          n = R && !R.error ? R.frames.length : 0;
+        const key =
+          n +
+          ":" +
+          S.frame +
+          ":" +
+          S.playing +
+          ":" +
+          S.view +
+          ":" +
+          Math.round(S.zoom * 100);
+        if (key === lastSync) return;
+        lastSync = key;
+        if (frameCtr)
+          frameCtr.textContent = n
+            ? `${String(S.frame + 1).padStart(2, "0")} / ${String(n).padStart(2, "0")}`
+            : "— / —";
+        if (scrub) {
+          if (+scrub.max !== n - 1) scrub.max = Math.max(0, n - 1);
+          scrub.value = S.frame;
+          scrub.disabled = n < 2;
+        }
+        if (btnPlay) btnPlay.innerHTML = icon(S.playing ? "pause" : "play", 18);
+        if (hudInfo) hudInfo.textContent = hudText();
+        document.querySelectorAll("#thumbs .thumb").forEach((el) => {
+          el.classList.toggle(
+            "sel",
+            +el.dataset.i === S.frame && !(S.playing && n > 1),
+          );
+          el.classList.toggle("now", S.playing && +el.dataset.i === S.frame);
+        });
+      }
+      function hudText() {
+        const R = S.result;
+        if (!R) return "muat PNG untuk mulai";
+        if (R.error) return "pipeline gagal — perbaiki parameter di panel kiri";
+        const g = R.geom,
+          n = R.frames.length,
+          z = Math.round(S.zoom * 100);
+        switch (S.view) {
+          case "anim":
+            return `frame ${S.frame + 1}/${n} · ${g.cw}×${g.ch} · ×${z}% · anchor (${g.ax},${g.ay})`;
+          case "onion":
+            return `onion 50% · ${n} frame · anchor (${g.ax},${g.ay}) — siluet & cahaya harus diam, kaki nempel baseline`;
+          case "edge":
+            return `frame 1 @400% · kiri terang / kanan gelap — periksa fringe tepi (§19)`;
+          case "sheet":
+            return `spritesheet ${R.sheetC.width}×${R.sheetC.height} · ${n} frame`;
+          default:
+            return `${R.plan.layout} · ${R.plan.cells.length} sel${R.badCuts.length ? ` · ${R.badCuts.length} potongan menembus konten` : ""}`;
+        }
+      }
+
+      /* ------------------------------ unduhan ------------------------------- */
+      async function canvasBytes(cv) {
+        const blob = await new Promise((r) => cv.toBlob(r, "image/png"));
+        return new Uint8Array(await blob.arrayBuffer());
+      }
+      function saveBlob(blob, name) {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = name;
+        document.body.append(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+      }
+      async function saveCanvas(cv, name) {
+        saveBlob(
+          new Blob([await canvasBytes(cv)], { type: "image/png" }),
+          name,
+        );
+      }
+      function ensureGif() {
+        const R = S.result;
+        if (!R || R.error) return null;
+        if (!R.gif) {
+          let seq = R.frames;
+          if (S.params.pingpong && seq.length > 2)
+            seq = seq.concat(seq.slice(1, -1).reverse());
+          R.gif = encodeGif(
+            seq.map((f) => f.imgd),
+            S.params.fps,
+          );
+        }
+        return R.gif;
+      }
+      async function collectFiles() {
+        const R = S.result,
+          P = S.params;
+        const safe =
+          (P.name || "anim").replace(/[^A-Za-z0-9_-]+/g, "_") || "anim";
+        const root = safe + "_anim";
+        const n = R.frames.length,
+          dig = Math.max(2, String(n - 1).length);
+        const files = [];
+        for (let i = 0; i < n; i++)
+          files.push({
+            name: `${root}/frames/frame_${String(i).padStart(dig, "0")}.png`,
+            data: await canvasBytes(R.frames[i].canvas),
+          });
+        files.push({
+          name: `${root}/spritesheet.png`,
+          data: await canvasBytes(R.sheetC),
+        });
+        files.push({
+          name: `${root}/preview_onion.png`,
+          data: await canvasBytes(R.onionBaked),
+        });
+        files.push({
+          name: `${root}/preview_edge.png`,
+          data: await canvasBytes(R.edgeC),
+        });
+        files.push({ name: `${root}/preview.gif`, data: ensureGif() });
+        files.push({
+          name: `${root}/anim.json`,
+          data: new TextEncoder().encode(
+            JSON.stringify(R.json, null, 2) + "\n",
+          ),
+        });
+        return files;
+      }
+      if (btnZip)
+        btnZip.onclick = async () => {
+          if (!ready()) return;
+          const old = btnZip.innerHTML;
+          btnZip.disabled = true;
+          btnZip.innerHTML = icon("box") + " menyiapkan…";
+          try {
+            const files = await collectFiles();
+            const safe =
+              (S.params.name || "anim").replace(/[^A-Za-z0-9_-]+/g, "_") ||
+              "anim";
+            saveBlob(buildZip(files), safe + "_anim.zip");
+            toast(
+              "Arsip lengkap diunduh — frames · spritesheet · anim.json · GIF · onion · edge",
+              "ok",
+            );
+          } catch (e) {
+            toast("Gagal membangun ZIP: " + e.message, "fail");
+          }
+          btnZip.innerHTML = old;
+          btnZip.disabled = false;
+        };
+      const btnSheet = $("btnSheet");
+      if (btnSheet)
+        btnSheet.onclick = () =>
+          ready() && saveCanvas(S.result.sheetC, "spritesheet.png");
+      const btnOnion = $("btnOnion");
+      if (btnOnion)
+        btnOnion.onclick = () =>
+          ready() && saveCanvas(S.result.onionBaked, "preview_onion.png");
+      const btnEdge = $("btnEdge");
+      if (btnEdge)
+        btnEdge.onclick = () =>
+          ready() && saveCanvas(S.result.edgeC, "preview_edge.png");
+      const btnGif = $("btnGif");
+      if (btnGif)
+        btnGif.onclick = () => {
+          const g = ensureGif();
+          if (g)
+            saveBlob(new Blob([g], { type: "image/gif" }), "preview.gif");
+        };
+      const btnJson = $("btnJson");
+      if (btnJson)
+        btnJson.onclick = () =>
+          ready() &&
+          saveBlob(
+            new Blob([JSON.stringify(S.result.json, null, 2) + "\n"], {
+              type: "application/json",
+            }),
+            "anim.json",
+          );
+      const btnCopy = $("btnCopy");
+      if (btnCopy)
+        btnCopy.onclick = async () => {
+          if (!ready()) return;
+          try {
+            await navigator.clipboard.writeText(
+              JSON.stringify(S.result.json, null, 2),
+            );
+            toast("anim.json disalin ke clipboard", "ok");
+          } catch (e) {
+            toast("Clipboard diblokir browser — gunakan tombol unduh", "warn");
+          }
+        };
+
+      /* ------------------------------ parameter UI -------------------------- */
+      function setSeg(id, v) {
+        document
+          .querySelectorAll("#" + id + " button")
+          .forEach((b) => b.classList.toggle("on", b.dataset.v === v));
+      }
+      function clearChips() {
+        document
+          .querySelectorAll("#presetChips .chip")
+          .forEach((c) => c.classList.remove("on"));
+      }
+      function syncTogs() {
+        if (btnLoop) btnLoop.classList.toggle("on", S.params.loop);
+        if (btnPong) btnPong.classList.toggle("on", S.params.pingpong);
+      }
+      function syncParamUI() {
+        const P = S.params;
+        document.querySelectorAll("[data-p]").forEach((el) => {
+          const k = el.dataset.p;
+          if (k === "name") {
+            el.value = P.name;
+            return;
+          }
+          const v = P[k];
+          el.value = el.dataset.auto !== undefined && !(v > 0) ? "" : v;
+        });
+        setSeg("segLayout", P.layout);
+        setSeg("segAnchor", P.anchor);
+        setSeg("segResample", P.resample);
+        if (rowGrid)
+          rowGrid.style.display = P.layout === "grid" ? "flex" : "none";
+        syncTogs();
+      }
+      /* semua input numerik/teks → param + rerun (debounce) */
+      document.querySelectorAll("[data-p]").forEach((el) => {
+        el.addEventListener("input", () => {
+          const k = el.dataset.p;
+          if (k === "name") {
+            S.params.name = el.value;
+            scheduleRun();
+            return;
+          }
+          const v = el.value.trim();
+          const n = parseFloat(v);
+          S.params[k] = v === "" || isNaN(n) ? 0 : n;
+          /* sinkronkan input kembar (fps slider + angka) */
+          document.querySelectorAll(`[data-p="${k}"]`).forEach((o) => {
+            if (o !== el) o.value = el.value || 0;
+          });
+          /* validasi ukuran frame / kanvas: harus berpasangan */
+          if (k === "frameW" || k === "frameH") {
+            fsNote.textContent =
+              S.params.frameW > 0 !== S.params.frameH > 0
+                ? "isi keduanya (W dan H) — selama salah satu kosong, ukuran diabaikan"
+                : "";
+          }
+          if (
+            [
+              "canvasW",
+              "canvasH",
+              "anchorX",
+              "anchorY",
+              "sink",
+              "pad",
+              "scale",
+            ].includes(k)
+          )
+            clearChips();
+          scheduleRun();
+        });
+      });
+      /* segmented controls */
+      [
+        ["segLayout", "layout"],
+        ["segAnchor", "anchor"],
+        ["segResample", "resample"],
+      ].forEach(([id, k]) => {
+        const segEl = $(id);
+        if (!segEl) return;
+        segEl.addEventListener("click", (e) => {
+          const b = e.target.closest("button[data-v]");
+          if (!b) return;
+          S.params[k] = b.dataset.v;
+          setSeg(id, b.dataset.v);
+          if (k === "anchor") clearChips();
+          if (rowGrid)
+            rowGrid.style.display =
+              S.params.layout === "grid" ? "flex" : "none";
+          scheduleRun();
+        });
+      });
+      /* preset §18.4 — quick-fill, tetap bisa dioverride manual */
+      $("presetChips")?.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-preset]");
+        if (!b) return;
+        const P = S.params;
+        const clear = () => {
+          P.canvasW = 0;
+          P.canvasH = 0;
+          P.anchorX = 0;
+          P.anchorY = 0;
+          P.anchor = "bottom-center";
+          P.sink = 6;
+          P.pad = 0;
+        };
+        const k = b.dataset.preset;
+        if (k === "auto") clear();
+        else if (k === "tile") {
+          clear();
+          P.canvasW = 128;
+          P.canvasH = 64;
+          P.anchor = "center";
+        } else if (k === "object" || k === "character") {
+          clear();
+          P.canvasW = 128;
+          P.canvasH = 160;
+          P.anchorX = 64;
+          P.anchorY = 150;
+        } else if (k === "building") {
+          clear();
+          P.canvasW = 256;
+          P.canvasH = 320;
+          P.anchorX = 128;
+          P.anchorY = 310;
+        }
+        clearChips();
+        b.classList.add("on");
+        syncParamUI();
+        run();
+      });
+
+      /* ------------------------------ events -------------------------------- */
+      document
+        .querySelectorAll("[data-pick]")
+        .forEach((b) => (b.onclick = () => fileInput?.click()));
+      if (fileInput)
+        fileInput.onchange = () => {
+          if (fileInput.files[0]) loadFile(fileInput.files[0]);
+          fileInput.value = "";
+        };
+      document
+        .querySelectorAll("[data-demo]")
+        .forEach((b) => (b.onclick = () => loadDemo(b.dataset.demo)));
+
+      /* drag & drop jendela penuh */
+      let dragDepth = 0;
+      window.addEventListener("dragenter", (e) => {
+        e.preventDefault();
+        dragDepth++;
+        document.body.classList.add("dragging");
+      });
+      window.addEventListener("dragleave", () => {
+        if (--dragDepth <= 0) {
+          dragDepth = 0;
+          document.body.classList.remove("dragging");
+        }
+      });
+      window.addEventListener("dragover", (e) => e.preventDefault());
+      window.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dragDepth = 0;
+        document.body.classList.remove("dragging");
+        const f = e.dataTransfer.files[0];
+        if (f) loadFile(f);
+      });
+
+      /* tabs */
+      $("tabs")?.addEventListener("click", (e) => {
+        const b = e.target.closest("button[data-view]");
+        if (!b) return;
+        setView(b.dataset.view);
+      });
+      function setView(v) {
+        S.view = v;
+        document
+          .querySelectorAll("#tabs button")
+          .forEach((b) => b.classList.toggle("on", b.dataset.view === v));
+        fitView();
+        lastSync = "";
+      }
+
+      /* zoom + pan */
+      if (zIn) zIn.onclick = () => zoomBy(1.3);
+      if (zOut) zOut.onclick = () => zoomBy(1 / 1.3);
+      if (zFit) zFit.onclick = fitView;
+      vpWrap?.addEventListener(
+        "wheel",
+        (e) => {
+          e.preventDefault();
+          const r = vpWrap.getBoundingClientRect();
+          zoomBy(
+            Math.exp(-e.deltaY * 0.0016),
+            e.clientX - r.left,
+            e.clientY - r.top,
+          );
+        },
+        { passive: false },
+      );
+      let panning = null;
+      vpWrap?.addEventListener("pointerdown", (e) => {
+        if (e.button !== 0) return;
+        panning = { x: e.clientX, y: e.clientY, px: S.panX, py: S.panY };
+        vpWrap.setPointerCapture(e.pointerId);
+      });
+      vpWrap?.addEventListener("pointermove", (e) => {
+        if (!panning) return;
+        S.panX = panning.px + (e.clientX - panning.x);
+        S.panY = panning.py + (e.clientY - panning.y);
+      });
+      vpWrap?.addEventListener("pointerup", () => (panning = null));
+      vpWrap?.addEventListener("dblclick", fitView);
+
+      /* transport */
+      if (btnPlay) btnPlay.onclick = togglePlay;
+      const btnFirst = $("btnFirst");
+      if (btnFirst)
+        btnFirst.onclick = () => {
+          if (ready()) {
+            S.playing = false;
+            S.frame = 0;
+            lastSync = "";
+          }
+        };
+      const btnLast = $("btnLast");
+      if (btnLast)
+        btnLast.onclick = () => {
+          if (ready()) {
+            S.playing = false;
+            S.frame = S.result.frames.length - 1;
+            lastSync = "";
+          }
+        };
+      const btnPrev = $("btnPrev");
+      if (btnPrev) btnPrev.onclick = () => step(-1);
+      const btnNext = $("btnNext");
+      if (btnNext) btnNext.onclick = () => step(1);
+      scrub?.addEventListener("input", () => {
+        S.frame = +scrub.value;
+        lastSync = "";
+      });
+      if (btnLoop)
+        btnLoop.onclick = () => {
+          S.params.loop = !S.params.loop;
+          syncTogs();
+          scheduleRun();
+        };
+      if (btnPong)
+        btnPong.onclick = () => {
+          S.params.pingpong = !S.params.pingpong;
+          syncTogs();
+          scheduleRun();
+        };
+
+      /* checks toggle */
+      const checksBar = $("checksBar");
+      if (checksBar && checksWrap)
+        checksBar.onclick = () => {
+          S.ckOpen =
+            !checksWrap.classList.contains("open") || S.ckOpen
+              ? !(checksWrap.classList.contains("open") && S.ckOpen)
+              : S.ckOpen;
+          /* sederhana: balik status open */
+          const willOpen = !checksWrap.classList.contains("open");
+          checksWrap.classList.toggle("open", willOpen);
+          S.ckOpen = willOpen;
+        };
+
+      /* keyboard */
+      window.addEventListener("keydown", (e) => {
+        if (e.target.matches("input,select,textarea")) return;
+        const views = ["anim", "onion", "edge", "sheet", "source"];
+        if (e.key === " ") {
+          e.preventDefault();
+          togglePlay();
+        } else if (e.key === "ArrowLeft") {
+          e.preventDefault();
+          step(-1);
+        } else if (e.key === "ArrowRight") {
+          e.preventDefault();
+          step(1);
+        } else if (e.key >= "1" && e.key <= "5") {
+          setView(views[+e.key - 1]);
+        } else if (e.key === "+" || e.key === "=") {
+          zoomBy(1.25);
+        } else if (e.key === "-") {
+          zoomBy(0.8);
+        } else if (e.key === "f") {
+          fitView();
+        }
+      });
+
+      /* ------------------------------ init ---------------------------------- */
+      function initApp() {
+        /* isi ikon statis — null-safe untuk preview srcdoc / sanitizer */
+        const setIcon = (id, name, size) => {
+          const n = $(id);
+          if (n) n.innerHTML = icon(name, size);
+        };
+        setIcon("zipIco", "box", 16);
+        setIcon("errIco", "fail", 20);
+        setIcon("btnFirst", "first", 16);
+        setIcon("btnLast", "last", 16);
+        setIcon("btnPrev", "prev", 16);
+        setIcon("btnNext", "next", 16);
+        if (typeof btnLoop !== "undefined" && btnLoop)
+          btnLoop.innerHTML = icon("loop", 13) + "<span>LOOP</span>";
+        if (typeof btnPong !== "undefined" && btnPong)
+          btnPong.innerHTML = icon("pong", 13) + "<span>PONG</span>";
+        setIcon("ckToggle", "chev", 14);
+        document
+          .querySelectorAll("[data-ic]")
+          .forEach((el) => (el.innerHTML = icon(el.dataset.ic, 13)));
+        syncParamUI();
+        renderChecks();
+        renderJson();
+        renderMeta();
+        updateHeroVis();
+        updateZoomUI();
+        requestAnimationFrame(tick);
+      }
+      if (document.readyState === "loading")
+        document.addEventListener("DOMContentLoaded", initApp, { once: true });
+      else initApp();
+    </script>
+  </body>
+</html>
