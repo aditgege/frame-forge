@@ -19,14 +19,45 @@ split → trim → anchor → loop → sheet
 
 ### 1. Jalankan
 
-Cukup buka `index.html` di browser (Chrome/Edge/Firefox modern).
+**Cara tercepat — tanpa server.** Cukup buka `index.html` di browser
+(Chrome/Edge/Firefox modern). Aplikasinya satu file tanpa `fetch`/ES module,
+jadi `file://` sudah cukup.
 
 ```bash
-# opsional: layani lewat HTTP server lokal
-npx serve .
-# atau
-python -m http.server 8080
+# klik dua kali index.html, atau:
+start index.html          # Windows
+open index.html           # macOS
+xdg-open index.html       # Linux
 ```
+
+**Cara dengan `npx serve .`** — direktori lokal dilayani lewat HTTP statis.
+Berguna kalau mau sering reload lewat DevTools, atau menguji dari perangkat
+lain di jaringan yang sama.
+
+```bash
+# butuh Node.js — cek dengan: node -v
+npx serve .
+# → Local:   http://localhost:3000
+# → Network: http://192.168.x.x:3000   (untuk tes di HP)
+```
+
+Buka URL yang ditampilkan terminal, lalu `Ctrl+C` untuk menghentikan server.
+Opsi berguna:
+
+```bash
+npx serve . -l 8080        # ganti port
+npx serve . --no-clipboard # jangan salin URL ke clipboard
+```
+
+Alternatif tanpa Node.js:
+
+```bash
+python -m http.server 8080 # lalu buka http://localhost:8080
+php -S localhost:8080
+```
+
+> Kalau hanya butuh menguji, `file://` sudah cukup — `npx serve` tidak
+> diwajibkan.
 
 Kalau mau cepat melihat alurnya tanpa file apa pun, klik **demo bersih** atau
 **demo drift** — keduanya membuat PNG contoh di dalam browser.
